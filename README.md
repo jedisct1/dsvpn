@@ -13,7 +13,7 @@ Features:
 * Tiny (~ 17 Kb), with an equally small and readable code base.
 * No external dependencies
 * Works out of the box. No lousy documentation to read. No configuration file. No post-configuration. Run a single-line command on the server, a similar one on the client and you're done. No firewall and routing rules to manually mess up with.
-* Works with Linux (client, server) and MacOS (client). Adding support for other operating systems is trivial.
+* Works with Linux (client, server) and MacOS (client). OpenBSD support will be added next. Adding support for other operating systems is trivial.
 
 Non-features:
 
@@ -64,10 +64,10 @@ Here, I use port `1959`. This is a Linux box and the network interface is `eno1`
 ## Example usage on the client
 
 ```sh
-sudo ./dsvpn client vpn.key auto 192.168.192.1 192.168.192.254 vpn.example.org 1959 en0 192.168.1.1
+sudo ./dsvpn client vpn.key auto 192.168.192.1 192.168.192.254 34.216.127.34 1959 en0 192.168.1.1
 ```
 
-This is a MacOS client, connecting to the VPN server `vpn.example.org` on port `1959`. Its WiFi interface name is `en0` and the local router address is `192.168.1.1`.
+This is a MacOS client, connecting to the VPN server `34.216.127.34` on port `1959`. Its WiFi interface name is `en0` and the local router address is `192.168.1.1`.
 
 ## That's it
 
