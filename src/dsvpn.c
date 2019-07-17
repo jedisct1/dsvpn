@@ -628,7 +628,7 @@ set_firewall_rules(const Context* context)
 
     if (context->is_server) {
 #ifdef __linux__
-        cmds = (const char* []){
+        cmds = (const char*[]){
             "sysctl net.ipv4.ip_forward=1",
             "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
             "ip link set dev $IF_NAME up",
@@ -643,15 +643,21 @@ set_firewall_rules(const Context* context)
 #endif
     } else {
 #ifdef __APPLE__
-        cmds = (const char* []){
+        cmds = (const char*[]){
             "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
-            "route add $EXT_IP $EXT_GW_IP", "route add 0/1 $REMOTE_TUN_IP",
-            "route add 128/1 $REMOTE_TUN_IP", NULL
+            "route add -inet6 0000::/1 ::1",
+            "route add -inet6 8000::/1 ::1",
+            "route add $EXT_IP $EXT_GW_IP",
+            "route add 0/1 $REMOTE_TUN_IP",
+            "route add 128/1 $REMOTE_TUN_IP",
+            NULL
         };
 #elif defined(__linux__)
-        cmds = (const char* []){
+        cmds = (const char*[]){
             "ip link set dev $IF_NAME up",
             "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
+            "ip -6 route add blackhole 0000::/1",
+            "ip -6 route add blackhole 8000::/1",
             "ip route add $EXT_IP via $EXT_GW_IP",
             "ip route add 0/1 via $REMOTE_TUN_IP",
             "ip route add 128/1 via $REMOTE_TUN_IP",
