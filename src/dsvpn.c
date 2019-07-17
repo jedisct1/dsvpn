@@ -658,10 +658,6 @@ set_firewall_rules(const Context* context)
             "ip route add 128/1 via $REMOTE_TUN_IP",
             NULL
         };
-        puts(
-            "Commands to route all the traffic to the tunnel on Linux haven't "
-            "been implemented yet. Submit a pull request if you know what they "
-            "should be.");
 #endif
     }
     if (cmds == NULL) {
