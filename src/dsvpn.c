@@ -678,6 +678,65 @@ set_firewall_rules(const Context* context)
 }
 
 static int
+del_firewall_rules(const Context* context)
+{
+    const char* substs[][2] = { { "$LOCAL_TUN_IP", context->local_tun_ip },
+                                { "$REMOTE_TUN_IP", context->remote_tun_ip },
+                                { "$EXT_IP", context->ext_ip },
+                                { "$EXT_PORT", context->ext_port },
+                                { "$EXT_IF_NAME", context->ext_if_name },
+                                { "$EXT_GW_IP", context->ext_gw_ip },
+                                { "$IF_NAME", context->if_name },
+                                { NULL, NULL } };
+    const char* const* cmds = NULL;
+    size_t             i;
+
+    if (context->is_server) {
+#ifdef __linux__
+        cmds = (const char* []){
+            "ip addr del $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
+            "iptables -t nat -D POSTROUTING -o $EXT_IF_NAME -s $REMOTE_TUN_IP "
+            "-j MASQUERADE",
+            "iptables -t filter -D FORWARD -i $EXT_IF_NAME -o $IF_NAME -m "
+            "state --state RELATED,ESTABLISHED -j ACCEPT",
+            "iptables -t filter -D FORWARD -i $IF_NAME -o $EXT_IF_NAME -j "
+            "ACCEPT",
+            NULL
+        };
+#endif
+    } else {
+#ifdef __APPLE__
+        cmds = (const char* []){
+            "route delete $EXT_IP $EXT_GW_IP", "route delete 0/1 $REMOTE_TUN_IP",
+            "route delete 128/1 $REMOTE_TUN_IP", NULL
+        };
+#elif defined(__linux__)
+        cmds = (const char* []){
+            "ip addr delete $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
+            "ip route delete $EXT_IP via $EXT_GW_IP",
+            "ip route delete 0/1 via $REMOTE_TUN_IP",
+            "ip route delete 128/1 via $REMOTE_TUN_IP",
+            NULL
+        };
+#endif
+    }
+    if (cmds == NULL) {
+        fprintf(stderr,
+                "Routing commands for that operating system have not been "
+                "added yet.\n");
+        return 0;
+    }
+    for (i = 0; cmds[i] != NULL; i++) {
+        if (shell_cmd(substs, cmds[i]) != 0) {
+            fprintf(stderr, "Unable to run [%s]: [%s]\n", cmds[i],
+                    strerror(errno));
+            return -1;
+        }
+    }
+    return 0;
+}
+
+static int
 client_key_exchange(Context* context)
 {
     uint32_t st[12];
