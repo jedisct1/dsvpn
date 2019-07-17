@@ -13,7 +13,12 @@ Features:
 * Tiny (~ 17 Kb), with an equally small and readable code base.
 * No external dependencies
 * Works out of the box. No lousy documentation to read. No configuration file. No post-configuration. Run a single-line command on the server, a similar one on the client and you're done. No firewall and routing rules to manually mess up with.
-* Works with Linux (client, server) and MacOS (client). OpenBSD support will be added next. Adding support for other operating systems is trivial.
+* Works with Linux (client, server) and MacOS (client). Adding support for other operating systems is trivial.
+
+Next:
+
+* Optimized ARM (NEON) implementation
+* OpenBSD support
 
 Non-features:
 
@@ -77,8 +82,10 @@ You are connected.
 
 I needed a VPN that works in an environment where only TCP/80 and TCP/443 are open.
 
-GloryTun and Wireguard don't work over TCP.
+WireGuard doesn't work over TCP.
+
+GloryTun is excellent, but requires post-configuration and the maintained branch uses UDP.
 
 OpenVPN is horribly complicated to set up.
 
-Everything else I looked at was either too difficult to use, too bloated, didn't work on MacOS, didn't work on my small router, wasn't maintained, or didn't feel secure.
+Everything else I looked at was either too difficult to use, slow, bloated, didn't work on MacOS, didn't work on my small router, wasn't maintained, or didn't feel secure.
