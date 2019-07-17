@@ -902,7 +902,7 @@ static void
 usage(void)
 {
     puts(
-        "Usage: dsvpn \"server\"|\"client\" <interface>|\"auto\" <key file> "
+        "Usage: dsvpn \"server\"|\"client\" <key file> <interface>|\"auto\" "
         "<local tun "
         "ip> <remote tun ip> <external host>|\"auto\" <external port> "
         "<external interface> <external gateway ip>|\"auto\"");
