@@ -36,6 +36,7 @@
 *.x86_64
 *.hex
 src/dsvpn
+src/*.key
 
 # Debug files
 *.dSYM/
