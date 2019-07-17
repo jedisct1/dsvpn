@@ -1,3 +1,84 @@
 # ![DSVPN](https://raw.github.com/jedisct1/dsvpn/master/logo.png)
 
-A Dead Simple VPN.
+DSVPN is a Dead Simple VPN, designed to address the most common use case for using a VPN:
+
+```text
+[client device] ---- (untrusted/restricted network) ---- [vpn server] ---- [the Internet]
+```
+
+Features:
+
+* Runs on TCP. Works pretty much everywhere, including on public WiFi where only TCP/443 is open or reliable.
+* Secure
+* Tiny (~ 17 Kb), with an equally small and readable code base.
+* No external dependencies
+* Works out of the box. No lousy documentation to read. No configuration file. No post-configuration. Run a single-line command on the server, a similar one on the client and you're done. No firewall and routing rules to manually mess up with.
+* Works with Linux as a server and MacOS as a client (but adding support for other operating systems is trivial).
+
+Non-features:
+
+* Anything else.
+
+## Installation
+
+```sh
+cd src && make
+```
+
+## Secret key
+
+DSVPN uses a shared secret. Create it with the following command:
+
+```sh
+dd if=/dev/urandom of=vpn.key count=1 bs=32
+```
+
+And copy it on the server and the client.
+
+## Usage
+
+```text
+pmvpn "server"|"client" <interface>|"auto" <key file> <local tun ip> <remote tun ip>
+      <external host>|"auto" <external port> <external interface>
+      <external gateway ip>|"auto"
+```
+
+* `server`|`client`: either `server` or `client`.
+* `interface`: this is the name of the VPN interface. On Linux, you can set it to anything. Or MacOS, it has to follow a more boring pattern. If you feel lazy, just use `auto` here.
+* `<key file>`: path to the file with the secret key (e.g. `vpn.key`).
+* `<local tun ip>`: local IP address of the tunnel. Use any private IP address that you don't use here. For some reason, I tend to pick `192.168.192.254` for the server, and `192.168.192.1` for the client.
+* `<remote tun ip>`: remote IP address of the tunnel. See above. These parameters must the same on the client and on the server, just reversed.
+* `<external host>`: on the client, it should be the IP address or the hostname of the server. On the server, it doesn't matter, so you can just use `auto`.
+* `<external port>`: the TCP port to listen to/connect to for the VPN. Use 443 or anything else.
+* `<external interface>`: the name of the external interface, that sends packets to the Internet. The first line of the `netstat -rn` output will tell you (`destination: default` or `destination: 0.0.0.0`).
+* `<external gateway ip>`: the internal router IP address. Required on the client, can be left to `auto` on the server. Once again, the first line printed by `netstat -rn` will tell you (`gateway`).
+
+## Example usage on the server
+
+```sh
+sudo ./dsvpn server vpn.key auto 192.168.192.254 192.168.192.1 auto 1959 eno1 auto
+```
+
+Here, I use port `1959`. This is a Linux box and the network interface is `eno1`.
+
+## Example usage on the client
+
+```sh
+sudo ./dsvpn client vpn.key auto 192.168.192.1 192.168.192.254 vpn.example.org 1959 en0 192.168.1.1
+```
+
+This is a MacOS client, connecting to the VPN server `vpn.example.org` on port `1959`. Its WiFi interface name is `en0` and the local router address is `192.168.1.1`.
+
+## That's it
+
+You are connected.
+
+## Why
+
+I needed a VPN that works in an environment where only TCP/80 and TCP/443 are open.
+
+GloryTun and Wireguard don't work over TCP.
+
+OpenVPN is horribly complicated to set up.
+
+Everything else I looked at was either too difficult to use, too bloated, didn't work on MacOS, didn't work on my small router, wasn't maintained, or didn't feel secure.
