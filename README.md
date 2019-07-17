@@ -74,6 +74,8 @@ sudo ./dsvpn client vpn.key auto 192.168.192.1 192.168.192.254 34.216.127.34 195
 
 This is a MacOS client, connecting to the VPN server `34.216.127.34` on port `1959`. Its WiFi interface name is `en0` and the local router address is `192.168.1.1`.
 
+On MacOS, the VPN server can be specified as a host name. Linux currently requires an IP address.
+
 ## That's it
 
 You are connected.
