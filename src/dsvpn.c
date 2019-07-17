@@ -645,8 +645,8 @@ set_firewall_rules(const Context* context)
 #ifdef __APPLE__
         cmds = (const char*[]){
             "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
-            "route add -inet6 0000::/1 ::1",
-            "route add -inet6 8000::/1 ::1",
+            "route add -inet6 -blackhole 0000::/1 ::1",
+            "route add -inet6 -blackhole 8000::/1 ::1",
             "route add $EXT_IP $EXT_GW_IP",
             "route add 0/1 $REMOTE_TUN_IP",
             "route add 128/1 $REMOTE_TUN_IP",
