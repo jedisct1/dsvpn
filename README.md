@@ -38,7 +38,7 @@ And copy it on the server and the client.
 ## Usage
 
 ```text
-pmvpn "server"|"client" <interface>|"auto" <key file> <local tun ip> <remote tun ip>
+dsvpn "server"|"client" <interface>|"auto" <key file> <local tun ip> <remote tun ip>
       <external host>|"auto" <external port> <external interface>
       <external gateway ip>|"auto"
 ```
