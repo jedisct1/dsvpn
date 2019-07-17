@@ -607,7 +607,7 @@ shell_cmd(const char* substs[][2], const char* args_str)
     if (posix_spawnp(&child, args[0], NULL, NULL, args, environ) != 0) {
         return -1;
     } else if (waitpid(child, &exit_status, 0) == (pid_t) -1 ||
-               !WIFEXITED(exit_status) || WEXITSTATUS(exit_status) != 0) {
+               !WIFEXITED(exit_status)) {
         return -1;
     }
     return 0;
@@ -630,14 +630,13 @@ set_firewall_rules(const Context* context)
     if (context->is_server) {
 #ifdef __linux__
         cmds = (const char* []){
+            "sysctl net.ipv4.ip_forward=1",
             "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
             "ip link set dev $IF_NAME up",
             "iptables -t nat -A POSTROUTING -o $EXT_IF_NAME -s $REMOTE_TUN_IP "
-            "-j "
-            "MASQUERADE",
+            "-j MASQUERADE",
             "iptables -t filter -A FORWARD -i $EXT_IF_NAME -o $IF_NAME -m "
-            "state --state "
-            "RELATED,ESTABLISHED -j ACCEPT",
+            "state --state RELATED,ESTABLISHED -j ACCEPT",
             "iptables -t filter -A FORWARD -i $IF_NAME -o $EXT_IF_NAME -j "
             "ACCEPT",
             NULL
