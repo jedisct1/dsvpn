@@ -661,8 +661,10 @@ set_firewall_rules(const Context* context)
 #endif
     }
     if (cmds == NULL) {
-        fprintf(stderr, "Unimplemented\n");
-        return -1;
+        fprintf(stderr,
+                "Routing commands for that operating system have not been "
+                "added yet.\n");
+        return 0;
     }
     for (i = 0; cmds[i] != NULL; i++) {
         if (shell_cmd(substs, cmds[i]) != 0) {
