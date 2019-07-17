@@ -173,7 +173,6 @@ tun_create(char if_name[IFNAMSIZ], const char* wanted_name)
         return -1;
     }
     snprintf(if_name, IFNAMSIZ, "%s", ifr.ifr_name);
-    puts(if_name);
 
     return fd;
 }
