@@ -649,6 +649,19 @@ set_firewall_rules(const Context* context)
             "route add $EXT_IP $EXT_GW_IP", "route add 0/1 $REMOTE_TUN_IP",
             "route add 128/1 $REMOTE_TUN_IP", NULL
         };
+#elif defined(__linux__)
+        cmds = (const char* []){
+            "ip link set dev $IF_NAME up",
+            "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
+            "ip route add $EXT_IP via $EXT_GW_IP",
+            "ip route add 0/1 via $REMOTE_TUN_IP",
+            "ip route add 128/1 via $REMOTE_TUN_IP",
+            NULL
+        };
+        puts(
+            "Commands to route all the traffic to the tunnel on Linux haven't "
+            "been implemented yet. Submit a pull request if you know what they "
+            "should be.");
 #endif
     }
     if (cmds == NULL) {
