@@ -19,6 +19,12 @@ Next:
 
 * Optimized ARM (NEON) implementation
 * OpenBSD support
+* Clean shutdown
+
+Maybe:
+
+* The ability to run custom commands after the link is up
+* Non-blocking key exchange, support for multiple clients
 
 Non-features:
 
