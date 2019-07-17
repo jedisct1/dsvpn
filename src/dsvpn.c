@@ -79,6 +79,11 @@ typedef struct Context_ {
 int signal_toggle = 0;
 
 static void
+signal_handler() {
+    signal_toggle = 1;
+}
+
+static void
 randombytes_buf(void* buf, size_t count)
 {
 #ifdef __linux__
@@ -814,10 +819,19 @@ client_reconnect(Context* context)
 }
 
 static int
+exit_handler(Context* context) {
+    if(del_firewall_rules(context) == -1) {
+        exit(-1);
+    } else {
+        exit(SIGINT);
+    }
+}
+
+static int
 event_loop(Context* context)
 {
     if (signal_toggle == 1) {
-        exit_handler(&context);
+        exit_handler(context);
     }
 
     struct __attribute__((aligned(16))) {
@@ -961,22 +975,6 @@ load_key_file(Context* context, const char* file)
 #endif
 
     return close(fd);
-}
-
-static int
-signal_handler() {
-    signal_toggle = 1;
-
-    return 0;
-}
-
-static int
-exit_handler(Context* context) {
-    if(del_firewall_rules(context) == -1) {
-        exit(-1);
-    } else {
-        exit(SIGINT);
-    }
 }
 
 static void
