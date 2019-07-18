@@ -5,9 +5,7 @@
 #include <sys/wait.h>
 
 #include <net/if.h>
-#ifdef __FreeBSD__
 #include <netinet/in.h>
-#endif
 #include <netinet/tcp.h>
 
 #include <ctype.h>
