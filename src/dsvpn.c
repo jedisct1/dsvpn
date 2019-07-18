@@ -821,9 +821,9 @@ client_reconnect(Context* context)
 static int
 exit_handler(Context* context) {
     if(del_firewall_rules(context) == -1) {
-        exit(-1);
+        exit(1);
     } else {
-        exit(SIGINT);
+        exit(0);
     }
 }
 
