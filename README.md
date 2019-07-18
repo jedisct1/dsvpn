@@ -12,13 +12,13 @@ Features:
 * Secure
 * Tiny (~ 17 Kb), with an equally small and readable code base.
 * No external dependencies
-* Works out of the box. No lousy documentation to read. No configuration file. No post-configuration. Run a single-line command on the server, a similar one on the client and you're done. No firewall and routing rules to manually mess up with.
-* Works with Linux (client, server) and MacOS (client). Adding support for other operating systems is trivial.
+* Works out of the box. No lousy documentation to read. No configuration file. No post-configuration. Run a single-line command on the server, a similar one on the client and you're done. No firewall and routing rules to manually mess with.
+* Works with Linux (client, server), MacOS (client) and OpenBSD (client). Adding support for other operating systems is trivial.
+* Blocks IPv6 on the client to prevent IPv6 leaks.
 
 Next:
 
 * Optimized ARM (NEON) implementation
-* OpenBSD support
 * Clean shutdown
 
 Maybe:
@@ -28,7 +28,7 @@ Maybe:
 
 Non-features:
 
-* Anything else.
+* Anything else. Including supporting operating systems I don't use.
 
 ## Installation
 
@@ -55,8 +55,8 @@ dsvpn "server"|"client" <key file> <interface>|"auto" <local tun ip> <remote tun
 ```
 
 * `server`|`client`: either `server` or `client`.
-* `interface`: this is the name of the VPN interface. On Linux, you can set it to anything. Or MacOS, it has to follow a more boring pattern. If you feel lazy, just use `auto` here.
 * `<key file>`: path to the file with the secret key (e.g. `vpn.key`).
+* `interface`: this is the name of the VPN interface. On Linux, you can set it to anything. Or MacOS, it has to follow a more boring pattern. If you feel lazy, just use `auto` here.
 * `<local tun ip>`: local IP address of the tunnel. Use any private IP address that you don't use here. For some reason, I tend to pick `192.168.192.254` for the server, and `192.168.192.1` for the client.
 * `<remote tun ip>`: remote IP address of the tunnel. See above. These parameters must the same on the client and on the server, just reversed.
 * `<external host>`: on the client, it should be the IP address or the hostname of the server. On the server, it doesn't matter, so you can just use `auto`.
@@ -94,6 +94,18 @@ WireGuard doesn't work over TCP.
 
 GloryTun is excellent, but requires post-configuration and the maintained branch uses UDP.
 
-OpenVPN is horribly complicated to set up.
+OpenVPN is horribly difficult to set up.
 
-Everything else I looked at was either too difficult to use, slow, bloated, didn't work on MacOS, didn't work on my small router, wasn't maintained, or didn't feel secure.
+Sshuttle is very nice and I've been using it a lot in the past, but it's not a VPN. It doesn't tunnel non-TCP traffic. It also requires a full Python install, which I'd rather avoid on my router.
+
+Everything else I looked at was either too difficult to use, slow, bloated, didn't work on MacOS, didn't work on small devices, was complicated to cross-compile due to dependencies, wasn't maintained, or didn't feel secure.
+
+## Cryptography
+
+The cryptographic primitives used in DSVPN are available as a standalone project: [Charm](https://github.com/jedisct1/charm).
+
+## Guarantees, support, feature additions
+
+None.
+
+This is a weekend project, and this is what I use, because it solves a problem I had. Extending it to solve different problems is not planned, but feel free to fork it and tailor it to your needs!

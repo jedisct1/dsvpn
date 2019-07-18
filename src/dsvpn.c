@@ -5,6 +5,7 @@
 #include <sys/wait.h>
 
 #include <net/if.h>
+#include <netinet/in.h>
 #include <netinet/tcp.h>
 
 #include <ctype.h>
@@ -13,7 +14,6 @@
 #include <inttypes.h>
 #include <netdb.h>
 #include <poll.h>
-#include <spawn.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,7 +23,6 @@
 
 #ifdef __linux__
 #include <linux/if_tun.h>
-#include <sys/random.h>
 #endif
 
 #ifdef __APPLE__
@@ -44,6 +43,9 @@
 #define TAG_LEN 6
 #define MAX_PACKET_LEN 65536
 #define TS_TOLERANCE 7200
+#define TIMEOUT (120 * 1000)
+#define OUTER_CONGESTION_CONTROL_ALG "bbr"
+#define BUFFERBLOAT_CONTROL 0
 
 #ifdef NATIVE_BIG_ENDIAN
 #define endian_swap16(x) __builtin_bswap16(x)
@@ -62,6 +64,8 @@ typedef struct Context_ {
     const char*   wanted_name;
     const char*   local_tun_ip;
     const char*   remote_tun_ip;
+    const char*   local_tun_ip6;
+    const char*   remote_tun_ip6;
     const char*   ext_ip;
     const char*   ext_port;
     const char*   ext_if_name;
@@ -71,6 +75,7 @@ typedef struct Context_ {
     int           tun_fd;
     int           client_fd;
     int           listen_fd;
+    int           congestion;
     struct pollfd fds[3];
     uint32_t      uc_kx_st[12];
     uint32_t      uc_st[2][12];
@@ -103,12 +108,11 @@ safe_write(const int fd, const void* const buf_, size_t count,
     const char*   buf = (const char*) buf_;
     ssize_t       written;
 
-    pfd.fd     = fd;
-    pfd.events = POLLOUT;
-
     while (count > (size_t) 0) {
-        while ((written = write(fd, buf, count)) <= (ssize_t) 0) {
+        while ((written = write(fd, buf, count)) < (ssize_t) 0) {
             if (errno == EAGAIN) {
+                pfd.fd     = fd;
+                pfd.events = POLLOUT;
                 if (poll(&pfd, (nfds_t) 1, timeout) == 0) {
                     errno = ETIMEDOUT;
                     goto ret;
@@ -125,24 +129,29 @@ ret:
 }
 
 static ssize_t
-safe_read(const int fd, void* const buf_, size_t count)
+safe_read(const int fd, void* const buf_, size_t count, const int timeout)
 {
+    struct pollfd  pfd;
     unsigned char* buf = (unsigned char*) buf_;
     ssize_t        readnb;
 
     while (count > (ssize_t) 0) {
-        while ((readnb = read(fd, buf, count)) < (ssize_t) 0 && errno == EINTR)
-            ;
-        if (readnb < (ssize_t) 0) {
-            return readnb;
-        }
-        if (readnb == (ssize_t) 0) {
-            break;
+        while ((readnb = read(fd, buf, count)) < (ssize_t) 0) {
+            if (errno == EAGAIN) {
+                pfd.fd     = fd;
+                pfd.events = POLLIN;
+                if (poll(&pfd, (nfds_t) 1, timeout) == 0) {
+                    errno = ETIMEDOUT;
+                    goto ret;
+                }
+            } else if (errno != EINTR) {
+                goto ret;
+            }
         }
         count -= readnb;
         buf += readnb;
     }
-
+ret:
     return (ssize_t)(buf - (unsigned char*) buf_);
 }
 
@@ -154,8 +163,19 @@ safe_read_partial(const int fd, void* const buf_, const size_t max_count)
 
     while ((readnb = read(fd, buf, max_count)) < (ssize_t) 0 && errno == EINTR)
         ;
-
     return readnb;
+}
+
+static ssize_t
+safe_write_partial(const int fd, void* const buf_, const size_t max_count)
+{
+    unsigned char* const buf = (unsigned char*) buf_;
+    ssize_t              writenb;
+
+    while ((writenb = write(fd, buf, max_count)) < (ssize_t) 0 &&
+           errno == EINTR)
+        ;
+    return writenb;
 }
 
 #ifdef __linux__
@@ -187,10 +207,10 @@ tun_create(char if_name[IFNAMSIZ], const char* wanted_name)
 static int
 tun_create_by_id(char if_name[IFNAMSIZ], unsigned int id)
 {
-    struct ctl_info ci;
+    struct ctl_info     ci;
     struct sockaddr_ctl sc;
-    int err;
-    int fd;
+    int                 err;
+    int                 fd;
 
     if ((fd = socket(PF_SYSTEM, SOCK_DGRAM, SYSPROTO_CONTROL)) == -1) {
         return -1;
@@ -205,11 +225,11 @@ tun_create_by_id(char if_name[IFNAMSIZ], unsigned int id)
     }
     memset(&sc, 0, sizeof sc);
     sc = (struct sockaddr_ctl){
-        .sc_id = ci.ctl_id,
-        .sc_len = sizeof sc,
-        .sc_family = AF_SYSTEM,
+        .sc_id      = ci.ctl_id,
+        .sc_len     = sizeof sc,
+        .sc_family  = AF_SYSTEM,
         .ss_sysaddr = AF_SYS_CONTROL,
-        .sc_unit = id + 1,
+        .sc_unit    = id + 1,
     };
     if (connect(fd, (struct sockaddr*) &sc, sizeof sc) != 0) {
         err = errno;
@@ -226,7 +246,7 @@ static int
 tun_create(char if_name[IFNAMSIZ], const char* wanted_name)
 {
     unsigned int id;
-    int fd;
+    int          fd;
 
     if (wanted_name == NULL || *wanted_name == 0) {
         for (id = 0; id < 32; id++) {
@@ -241,6 +261,24 @@ tun_create(char if_name[IFNAMSIZ], const char* wanted_name)
         return -1;
     }
     return tun_create_by_id(if_name, id);
+}
+#else
+static int
+tun_create(char if_name[IFNAMSIZ], const char* wanted_name)
+{
+    char path[64];
+
+    if (wanted_name == NULL) {
+        fprintf(stderr,
+                "The tunnel device name must be specified on that platform "
+                "(try 'tun0')\n");
+        errno = EINVAL;
+        return -1;
+    }
+    snprintf(if_name, IFNAMSIZ, "%s", wanted_name);
+    snprintf(path, sizeof path, "/dev/%s", wanted_name);
+
+    return open(path, O_RDWR);
 }
 #endif
 
@@ -271,23 +309,23 @@ tun_read(int fd, void* data, size_t size)
 static ssize_t
 tun_write(int fd, const void* data, size_t size)
 {
-    return safe_write(fd, data, size, -1);
+    return safe_write(fd, data, size, TIMEOUT);
 }
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
 static ssize_t
 tun_read(int fd, void* data, size_t size)
 {
-    ssize_t ret;
+    ssize_t  ret;
     uint32_t family;
 
     struct iovec iov[2] = {
         {
             .iov_base = &family,
-            .iov_len = sizeof family,
+            .iov_len  = sizeof family,
         },
         {
             .iov_base = data,
-            .iov_len = size,
+            .iov_len  = size,
         },
     };
 
@@ -314,7 +352,7 @@ static ssize_t
 tun_write(int fd, const void* data, size_t size)
 {
     uint32_t family;
-    ssize_t ret;
+    ssize_t  ret;
 
     if (size <= 0) {
         return 0;
@@ -333,11 +371,11 @@ tun_write(int fd, const void* data, size_t size)
     struct iovec iov[2] = {
         {
             .iov_base = &family,
-            .iov_len = sizeof family,
+            .iov_len  = sizeof family,
         },
         {
             .iov_base = (void*) data,
-            .iov_len = size,
+            .iov_len  = size,
         },
     };
     ret = writev(fd, iov, 2);
@@ -361,6 +399,11 @@ tcp_opts(int fd)
     (void) setsockopt(fd, IPPROTO_TCP, TCP_QUICKACK, (char*) &on, sizeof on);
 #else
     (void) setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char*) &on, sizeof on);
+#endif
+#ifdef TCP_CONGESTION
+    (void) setsockopt(fd, IPPROTO_TCP, TCP_CONGESTION,
+                      OUTER_CONGESTION_CONTROL_ALG,
+                      sizeof OUTER_CONGESTION_CONTROL_ALG - 1);
 #endif
 
     return 0;
@@ -485,7 +528,7 @@ server_key_exchange(Context* context, const int client_fd)
 
     memcpy(st, context->uc_kx_st, sizeof st);
     errno = EACCES;
-    if (safe_read_partial(client_fd, pkt1, sizeof pkt1) != sizeof pkt1) {
+    if (safe_read(client_fd, pkt1, sizeof pkt1, TIMEOUT) != sizeof pkt1) {
         return -1;
     }
     uc_hash(st, h, pkt1, 32 + 8);
@@ -503,9 +546,9 @@ server_key_exchange(Context* context, const int client_fd)
                 ts, now);
         return -1;
     }
-    randombytes_buf(pkt2, 32);
+    uc_randombytes_buf(pkt2, 32);
     uc_hash(st, pkt2 + 32, pkt2, 32);
-    if (safe_write(client_fd, pkt2, sizeof pkt2, -1) != sizeof pkt2) {
+    if (safe_write(client_fd, pkt2, sizeof pkt2, TIMEOUT) != sizeof pkt2) {
         return -1;
     }
     uc_hash(st, k, NULL, 0);
@@ -540,25 +583,24 @@ tcp_accept(Context* context, int listen_fd)
         errno = err;
         return -1;
     }
+    context->congestion = 0;
     if (server_key_exchange(context, client_fd) != 0) {
         fprintf(stderr, "Authentication failed\n");
         (void) close(client_fd);
         errno = EACCES;
         return -1;
     }
-
     return client_fd;
 }
 
 static int
 shell_cmd(const char* substs[][2], const char* args_str)
 {
-    extern char* environ[];
-    char*        args[64];
-    char         cmdbuf[4096];
-    pid_t        child;
-    size_t       args_i = 0, cmdbuf_i = 0, args_str_i, i;
-    int          c, exit_status, is_space = 1;
+    char*  args[64];
+    char   cmdbuf[4096];
+    pid_t  child;
+    size_t args_i = 0, cmdbuf_i = 0, args_str_i, i;
+    int    c, exit_status, is_space = 1;
 
     errno = ENOSPC;
     for (args_str_i = 0; (c = args_str[args_str_i]) != 0; args_str_i++) {
@@ -609,9 +651,11 @@ shell_cmd(const char* substs[][2], const char* args_str)
         return -1;
     }
     args[args_i] = NULL;
-    errno        = 0;
-    if (posix_spawnp(&child, args[0], NULL, NULL, args, environ) != 0) {
+    if ((child = vfork()) == (pid_t) -1) {
         return -1;
+    } else if (child == (pid_t) 0) {
+        execvp(args[0], args);
+        _exit(1);
     } else if (waitpid(child, &exit_status, 0) == (pid_t) -1 ||
                !WIFEXITED(exit_status)) {
         return -1;
@@ -622,7 +666,9 @@ shell_cmd(const char* substs[][2], const char* args_str)
 static int
 set_firewall_rules(const Context* context)
 {
-    const char* substs[][2] = { { "$LOCAL_TUN_IP", context->local_tun_ip },
+    const char* substs[][2] = { { "$LOCAL_TUN_IP6", context->local_tun_ip6 },
+                                { "$REMOTE_TUN_IP6", context->remote_tun_ip6 },
+                                { "$LOCAL_TUN_IP", context->local_tun_ip },
                                 { "$REMOTE_TUN_IP", context->remote_tun_ip },
                                 { "$EXT_IP", context->ext_ip },
                                 { "$EXT_PORT", context->ext_port },
@@ -649,19 +695,29 @@ set_firewall_rules(const Context* context)
         };
 #endif
     } else {
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
         cmds = (const char* []){
             "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
-            "route add $EXT_IP $EXT_GW_IP", "route add 0/1 $REMOTE_TUN_IP",
-            "route add 128/1 $REMOTE_TUN_IP", NULL
+            "ifconfig $IF_NAME inet6 $LOCAL_TUN_IP6 $REMOTE_TUN_IP6 prefixlen "
+            "128 up",
+            "route add $EXT_IP $EXT_GW_IP",
+            "route add 0/1 $REMOTE_TUN_IP",
+            "route add 128/1 $REMOTE_TUN_IP",
+            "route add -inet6 -blackhole 0000::/1 $REMOTE_TUN_IP6",
+            "route add -inet6 -blackhole 8000::/1 $REMOTE_TUN_IP6",
+            NULL
         };
 #elif defined(__linux__)
         cmds = (const char* []){
+            "sysctl net.ipv4.tcp_congestion_control=bbr",
             "ip link set dev $IF_NAME up",
             "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
+            "ip -6 addr add $LOCAL_TUN_IP6 peer $REMOTE_TUN_IP6 dev $IF_NAME",
             "ip route add $EXT_IP via $EXT_GW_IP",
             "ip route add 0/1 via $REMOTE_TUN_IP",
             "ip route add 128/1 via $REMOTE_TUN_IP",
+            "ip -6 route add 0/1 via $REMOTE_TUN_IP6",
+            "ip -6 route add 128/1 via $REMOTE_TUN_IP6",
             NULL
         };
 #endif
@@ -752,15 +808,16 @@ client_key_exchange(Context* context)
     uint64_t now;
 
     memcpy(st, context->uc_kx_st, sizeof st);
-    randombytes_buf(pkt1, 32);
+    uc_randombytes_buf(pkt1, 32);
     now = endian_swap64(time(NULL));
     memcpy(pkt1 + 32, &now, 8);
     uc_hash(st, pkt1 + 32 + 8, pkt1, 32 + 8);
-    if (safe_write(context->client_fd, pkt1, sizeof pkt1, -1) != sizeof pkt1) {
+    if (safe_write(context->client_fd, pkt1, sizeof pkt1, TIMEOUT) !=
+        sizeof pkt1) {
         return -1;
     }
     errno = EACCES;
-    if (safe_read_partial(context->client_fd, pkt2, sizeof pkt2) !=
+    if (safe_read(context->client_fd, pkt2, sizeof pkt2, TIMEOUT) !=
         sizeof pkt2) {
         return -1;
     }
@@ -787,6 +844,11 @@ client_connect(Context* context)
         perror("tcp_client");
         return -1;
     }
+#if BUFFERBLOAT_CONTROL
+    fcntl(context->client_fd, F_SETFL,
+          fcntl(context->client_fd, F_GETFL, 0) | O_NONBLOCK);
+#endif
+    context->congestion = 0;
     if (client_key_exchange(context) != 0) {
         fprintf(stderr, "Authentication failed\n");
         client_disconnect(context);
@@ -796,6 +858,7 @@ client_connect(Context* context)
                                                    .events = POLLIN,
                                                    .revents = 0 };
     puts("Connected");
+
     return 0;
 }
 
@@ -808,7 +871,7 @@ client_reconnect(Context* context)
     if (context->is_server) {
         return 0;
     }
-    for (i = 1; i < RECONNECT_ATTEMPTS; i++) {
+    for (i = 0; i < RECONNECT_ATTEMPTS; i++) {
         puts("Trying to reconnect");
         sleep(i);
         if (client_connect(context) == 0) {
@@ -845,7 +908,8 @@ event_loop(Context* context)
     int                  found_fds;
     int                  new_client_fd;
 
-    if ((found_fds = poll(fds, POLLFD_COUNT, -1)) == -1) {
+    if ((found_fds = poll(fds, POLLFD_COUNT, 1500)) == -1) {
+        perror("poll");
         return -1;
     }
     if (fds[POLLFD_LISTENER].revents & POLLIN) {
@@ -871,17 +935,31 @@ event_loop(Context* context)
     if (fds[POLLFD_TUN].revents & POLLIN) {
         len = tun_read(context->tun_fd, buf.data, sizeof buf.data);
         if (len <= 0) {
+            perror("tun_read");
             return -1;
+        }
+        if (context->congestion) {
+            context->congestion = 0;
+            return 0;
         }
         if (context->client_fd != -1) {
             unsigned char tag_full[16];
+            ssize_t       writenb;
             uint16_t      binlen = endian_swap16((uint16_t) len);
 
             memcpy(buf.len, &binlen, 2);
             uc_encrypt(context->uc_st[0], buf.data, len, tag_full);
             memcpy(buf.tag, tag_full, TAG_LEN);
-            if (safe_write(context->client_fd, buf.len, 2U + TAG_LEN + len,
-                           -1) < 0) {
+            writenb = safe_write_partial(context->client_fd, buf.len,
+                                         2U + TAG_LEN + len);
+            if (writenb != (ssize_t)(2U + TAG_LEN + len)) {
+                if (errno == EAGAIN) {
+                    context->congestion = 1;
+                    writenb = safe_write(context->client_fd, buf.len,
+                                         2U + TAG_LEN + len, TIMEOUT);
+                }
+            }
+            if (writenb != (ssize_t)(2U + TAG_LEN + len)) {
                 perror("safe_write (client)");
                 return client_reconnect(context);
             }
@@ -894,7 +972,8 @@ event_loop(Context* context)
     }
     if (fds[POLLFD_CLIENT].revents & POLLIN) {
         uint16_t binlen;
-        if (safe_read(context->client_fd, &binlen, sizeof binlen) !=
+
+        if (safe_read(context->client_fd, &binlen, sizeof binlen, TIMEOUT) !=
             sizeof binlen) {
             len = -1;
         } else {
@@ -903,7 +982,7 @@ event_loop(Context* context)
                 len = -1;
             } else {
                 len = safe_read(context->client_fd, buf.tag,
-                                TAG_LEN + (size_t) binlen);
+                                TAG_LEN + (size_t) binlen, TIMEOUT);
             }
         }
         if (len < TAG_LEN) {
@@ -962,17 +1041,13 @@ load_key_file(Context* context, const char* file)
     if ((fd = open(file, O_RDONLY)) == -1) {
         return -1;
     }
-    if (safe_read(fd, key, sizeof key) != sizeof key) {
+    if (safe_read(fd, key, sizeof key, TIMEOUT) != sizeof key) {
         return -1;
         memset(key, 0, sizeof key);
     }
     uc_state_init(context->uc_kx_st, key,
                   (const unsigned char*) "VPN Key Exchange");
-#ifdef __APPLE__
-    memset_s(key, sizeof key, 0, sizeof key);
-#else
-    explicit_bzero(key, sizeof key);
-#endif
+    uc_memzero(key, sizeof key);
 
     return close(fd);
 }
@@ -988,11 +1063,25 @@ usage(void)
     return;
 }
 
+static void
+get_tun6_addresses(Context* context)
+{
+    static char local_tun_ip6[40], remote_tun_ip6[40];
+
+    snprintf(local_tun_ip6, sizeof local_tun_ip6, "64:ff9b::%s",
+             context->local_tun_ip);
+    snprintf(remote_tun_ip6, sizeof remote_tun_ip6, "64:ff9b::%s",
+             context->remote_tun_ip);
+    context->local_tun_ip6  = local_tun_ip6;
+    context->remote_tun_ip6 = remote_tun_ip6;
+}
+
 int
 main(int argc, char* argv[])
 {
     Context context;
 
+    (void) safe_read_partial;
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
 
@@ -1012,6 +1101,7 @@ main(int argc, char* argv[])
     context.ext_port      = argv[7];
     context.ext_if_name   = argv[8];
     context.ext_gw_ip     = argv[9];
+    get_tun6_addresses(&context);
 
     context.tun_fd = tun_create(
         context.if_name,

@@ -1,0 +1,10 @@
+language: c
+sudo: false
+dist: xenial
+
+compiler:
+ - clang
+ - gcc
+
+script: make -C src
+

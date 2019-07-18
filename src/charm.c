@@ -4,6 +4,13 @@
 #ifdef __SSSE3__
 #include <x86intrin.h>
 #endif
+#ifdef __linux__
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#include <sys/syscall.h>
+#include <unistd.h>
+#endif
 
 #include "charm.h"
 
@@ -269,4 +276,28 @@ uc_hash(uint32_t st[12], unsigned char h[32], const unsigned char *msg,
     permute(st);
     squeeze_permute(st, &h[0]);
     squeeze_permute(st, &h[16]);
+}
+
+void
+uc_memzero(void *buf, size_t len)
+{
+    volatile unsigned char *volatile buf_ =
+        (volatile unsigned char *volatile) buf;
+    size_t i = (size_t) 0U;
+
+    while (i < len) {
+        buf_[i++] = 0U;
+    }
+}
+
+void
+uc_randombytes_buf(void *buf, size_t len)
+{
+#ifdef __linux__
+    if ((size_t) syscall(SYS_getrandom, buf, (int) len, 0) != len) {
+        abort();
+    }
+#else
+    arc4random_buf(buf, len);
+#endif
 }
