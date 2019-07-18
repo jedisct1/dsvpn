@@ -13,7 +13,6 @@
 #include <inttypes.h>
 #include <netdb.h>
 #include <poll.h>
-#include <spawn.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -609,9 +608,11 @@ shell_cmd(const char* substs[][2], const char* args_str)
         return -1;
     }
     args[args_i] = NULL;
-    errno        = 0;
-    if (posix_spawnp(&child, args[0], NULL, NULL, args, environ) != 0) {
+    if ((child = vfork()) == (pid_t) -1) {
         return -1;
+    } else if (child == (pid_t) 0) {
+        execvp(args[0], args);
+        _exit(1);
     } else if (waitpid(child, &exit_status, 0) == (pid_t) -1 ||
                !WIFEXITED(exit_status)) {
         return -1;
