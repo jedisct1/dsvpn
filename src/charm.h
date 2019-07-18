@@ -16,4 +16,6 @@ int uc_decrypt(uint32_t st[12], unsigned char *msg, size_t msg_len,
 void uc_hash(uint32_t st[12], unsigned char h[32], const unsigned char *msg,
              size_t len);
 
+void uc_memzero(void *pnt, size_t len);
+
 #endif

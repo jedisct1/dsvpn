@@ -90,18 +90,6 @@ randombytes_buf(void* buf, size_t count)
 #endif
 }
 
-static void
-memzero(void* buf, size_t count)
-{
-    volatile unsigned char* volatile buf_ =
-        (volatile unsigned char* volatile) buf;
-    size_t i = (size_t) 0U;
-
-    while (i < count) {
-        buf_[i++] = 0U;
-    }
-}
-
 static ssize_t
 safe_write(const int fd, const void* const buf_, size_t count,
            const int timeout)
@@ -913,7 +901,7 @@ load_key_file(Context* context, const char* file)
     }
     uc_state_init(context->uc_kx_st, key,
                   (const unsigned char*) "VPN Key Exchange");
-    memzero(key, sizeof key);
+    uc_memzero(key, sizeof key);
 
     return close(fd);
 }

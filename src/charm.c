@@ -270,3 +270,15 @@ uc_hash(uint32_t st[12], unsigned char h[32], const unsigned char *msg,
     squeeze_permute(st, &h[0]);
     squeeze_permute(st, &h[16]);
 }
+
+void
+uc_memzero(void *pnt, size_t len)
+{
+    volatile unsigned char *volatile pnt_ =
+        (volatile unsigned char *volatile) pnt;
+    size_t i = (size_t) 0U;
+
+    while (i < len) {
+        pnt_[i++] = 0U;
+    }
+}
