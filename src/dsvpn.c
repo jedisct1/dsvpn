@@ -5,6 +5,9 @@
 #include <sys/wait.h>
 
 #include <net/if.h>
+#ifdef __FreeBSD__
+#include <netinet/in.h>
+#endif
 #include <netinet/tcp.h>
 
 #include <ctype.h>
@@ -291,7 +294,7 @@ tun_write(int fd, const void* data, size_t size)
 {
     return safe_write(fd, data, size, TIMEOUT);
 }
-#elif defined(__APPLE__) || defined(__OpenBSD__)
+#elif defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
 static ssize_t
 tun_read(int fd, void* data, size_t size)
 {
@@ -675,7 +678,7 @@ set_firewall_rules(const Context* context)
         };
 #endif
     } else {
-#if defined(__APPLE__) || defined(__OpenBSD__)
+#if defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
         cmds = (const char* []){
             "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
             "ifconfig $IF_NAME inet6 $LOCAL_TUN_IP6 $REMOTE_TUN_IP6 prefixlen "
