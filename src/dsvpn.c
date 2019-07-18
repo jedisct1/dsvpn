@@ -23,7 +23,6 @@
 
 #ifdef __linux__
 #include <linux/if_tun.h>
-#include <sys/syscall.h>
 #endif
 
 #ifdef __APPLE__
@@ -77,18 +76,6 @@ typedef struct Context_ {
     uint32_t      uc_kx_st[12];
     uint32_t      uc_st[2][12];
 } Context;
-
-static void
-randombytes_buf(void* buf, size_t count)
-{
-#ifdef __linux__
-    if ((size_t) syscall(SYS_getrandom, buf, (int) count, 0) != count) {
-        abort();
-    }
-#else
-    arc4random_buf(buf, count);
-#endif
-}
 
 static ssize_t
 safe_write(const int fd, const void* const buf_, size_t count,
@@ -182,10 +169,10 @@ tun_create(char if_name[IFNAMSIZ], const char* wanted_name)
 static int
 tun_create_by_id(char if_name[IFNAMSIZ], unsigned int id)
 {
-    struct ctl_info ci;
+    struct ctl_info     ci;
     struct sockaddr_ctl sc;
-    int err;
-    int fd;
+    int                 err;
+    int                 fd;
 
     if ((fd = socket(PF_SYSTEM, SOCK_DGRAM, SYSPROTO_CONTROL)) == -1) {
         return -1;
@@ -200,11 +187,11 @@ tun_create_by_id(char if_name[IFNAMSIZ], unsigned int id)
     }
     memset(&sc, 0, sizeof sc);
     sc = (struct sockaddr_ctl){
-        .sc_id = ci.ctl_id,
-        .sc_len = sizeof sc,
-        .sc_family = AF_SYSTEM,
+        .sc_id      = ci.ctl_id,
+        .sc_len     = sizeof sc,
+        .sc_family  = AF_SYSTEM,
         .ss_sysaddr = AF_SYS_CONTROL,
-        .sc_unit = id + 1,
+        .sc_unit    = id + 1,
     };
     if (connect(fd, (struct sockaddr*) &sc, sizeof sc) != 0) {
         err = errno;
@@ -221,7 +208,7 @@ static int
 tun_create(char if_name[IFNAMSIZ], const char* wanted_name)
 {
     unsigned int id;
-    int fd;
+    int          fd;
 
     if (wanted_name == NULL || *wanted_name == 0) {
         for (id = 0; id < 32; id++) {
@@ -272,17 +259,17 @@ tun_write(int fd, const void* data, size_t size)
 static ssize_t
 tun_read(int fd, void* data, size_t size)
 {
-    ssize_t ret;
+    ssize_t  ret;
     uint32_t family;
 
     struct iovec iov[2] = {
         {
             .iov_base = &family,
-            .iov_len = sizeof family,
+            .iov_len  = sizeof family,
         },
         {
             .iov_base = data,
-            .iov_len = size,
+            .iov_len  = size,
         },
     };
 
@@ -309,7 +296,7 @@ static ssize_t
 tun_write(int fd, const void* data, size_t size)
 {
     uint32_t family;
-    ssize_t ret;
+    ssize_t  ret;
 
     if (size <= 0) {
         return 0;
@@ -328,11 +315,11 @@ tun_write(int fd, const void* data, size_t size)
     struct iovec iov[2] = {
         {
             .iov_base = &family,
-            .iov_len = sizeof family,
+            .iov_len  = sizeof family,
         },
         {
             .iov_base = (void*) data,
-            .iov_len = size,
+            .iov_len  = size,
         },
     };
     ret = writev(fd, iov, 2);
@@ -498,7 +485,7 @@ server_key_exchange(Context* context, const int client_fd)
                 ts, now);
         return -1;
     }
-    randombytes_buf(pkt2, 32);
+    uc_randombytes_buf(pkt2, 32);
     uc_hash(st, pkt2 + 32, pkt2, 32);
     if (safe_write(client_fd, pkt2, sizeof pkt2, -1) != sizeof pkt2) {
         return -1;
@@ -698,7 +685,7 @@ client_key_exchange(Context* context)
     uint64_t now;
 
     memcpy(st, context->uc_kx_st, sizeof st);
-    randombytes_buf(pkt1, 32);
+    uc_randombytes_buf(pkt1, 32);
     now = endian_swap64(time(NULL));
     memcpy(pkt1 + 32, &now, 8);
     uc_hash(st, pkt1 + 32 + 8, pkt1, 32 + 8);
