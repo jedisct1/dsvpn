@@ -533,6 +533,11 @@ tcp_accept(Context* context, int listen_fd)
                             &client_sa_len)) < 0) {
         return -1;
     }
+    if (context->client_fd != -1) {
+        (void) close(client_fd);
+        errno = EPERM;
+        return -1;
+    }
     if (client_sa_len <= (socklen_t) 0U) {
         (void) close(client_fd);
         errno = EINTR;
