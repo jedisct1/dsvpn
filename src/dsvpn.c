@@ -42,6 +42,7 @@
 #define TAG_LEN 6
 #define MAX_PACKET_LEN 65536
 #define TS_TOLERANCE 7200
+#define TIMEOUT (120 * 1000)
 #define OUTER_CONGESTION_CONTROL_ALG "bbr"
 
 #ifdef NATIVE_BIG_ENDIAN
@@ -292,7 +293,7 @@ tun_read(int fd, void* data, size_t size)
 static ssize_t
 tun_write(int fd, const void* data, size_t size)
 {
-    return safe_write(fd, data, size, -1);
+    return safe_write(fd, data, size, TIMEOUT);
 }
 #elif defined(__APPLE__) || defined(__OpenBSD__)
 static ssize_t
@@ -511,7 +512,7 @@ server_key_exchange(Context* context, const int client_fd)
 
     memcpy(st, context->uc_kx_st, sizeof st);
     errno = EACCES;
-    if (safe_read(client_fd, pkt1, sizeof pkt1, -1) != sizeof pkt1) {
+    if (safe_read(client_fd, pkt1, sizeof pkt1, TIMEOUT) != sizeof pkt1) {
         return -1;
     }
     uc_hash(st, h, pkt1, 32 + 8);
@@ -531,7 +532,7 @@ server_key_exchange(Context* context, const int client_fd)
     }
     uc_randombytes_buf(pkt2, 32);
     uc_hash(st, pkt2 + 32, pkt2, 32);
-    if (safe_write(client_fd, pkt2, sizeof pkt2, -1) != sizeof pkt2) {
+    if (safe_write(client_fd, pkt2, sizeof pkt2, TIMEOUT) != sizeof pkt2) {
         return -1;
     }
     uc_hash(st, k, NULL, 0);
@@ -735,11 +736,13 @@ client_key_exchange(Context* context)
     now = endian_swap64(time(NULL));
     memcpy(pkt1 + 32, &now, 8);
     uc_hash(st, pkt1 + 32 + 8, pkt1, 32 + 8);
-    if (safe_write(context->client_fd, pkt1, sizeof pkt1, -1) != sizeof pkt1) {
+    if (safe_write(context->client_fd, pkt1, sizeof pkt1, TIMEOUT) !=
+        sizeof pkt1) {
         return -1;
     }
     errno = EACCES;
-    if (safe_read(context->client_fd, pkt2, sizeof pkt2, -1) != sizeof pkt2) {
+    if (safe_read(context->client_fd, pkt2, sizeof pkt2, TIMEOUT) !=
+        sizeof pkt2) {
         return -1;
     }
     uc_hash(st, h, pkt2, 32);
@@ -811,7 +814,7 @@ event_loop(Context* context)
     int                  found_fds;
     int                  new_client_fd;
 
-    if ((found_fds = poll(fds, POLLFD_COUNT, -1)) == -1) {
+    if ((found_fds = poll(fds, POLLFD_COUNT, 1500)) == -1) {
         return -1;
     }
     if (fds[POLLFD_LISTENER].revents & POLLIN) {
@@ -847,7 +850,7 @@ event_loop(Context* context)
             uc_encrypt(context->uc_st[0], buf.data, len, tag_full);
             memcpy(buf.tag, tag_full, TAG_LEN);
             if (safe_write(context->client_fd, buf.len, 2U + TAG_LEN + len,
-                           -1) < 0) {
+                           TIMEOUT) < 0) {
                 perror("safe_write (client)");
                 return client_reconnect(context);
             }
@@ -860,7 +863,7 @@ event_loop(Context* context)
     }
     if (fds[POLLFD_CLIENT].revents & POLLIN) {
         uint16_t binlen;
-        if (safe_read(context->client_fd, &binlen, sizeof binlen, -1) !=
+        if (safe_read(context->client_fd, &binlen, sizeof binlen, TIMEOUT) !=
             sizeof binlen) {
             len = -1;
         } else {
@@ -869,7 +872,7 @@ event_loop(Context* context)
                 len = -1;
             } else {
                 len = safe_read(context->client_fd, buf.tag,
-                                TAG_LEN + (size_t) binlen, -1);
+                                TAG_LEN + (size_t) binlen, TIMEOUT);
             }
         }
         if (len < TAG_LEN) {
@@ -928,7 +931,7 @@ load_key_file(Context* context, const char* file)
     if ((fd = open(file, O_RDONLY)) == -1) {
         return -1;
     }
-    if (safe_read(fd, key, sizeof key, -1) != sizeof key) {
+    if (safe_read(fd, key, sizeof key, TIMEOUT) != sizeof key) {
         return -1;
         memset(key, 0, sizeof key);
     }
