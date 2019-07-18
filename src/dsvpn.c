@@ -552,12 +552,11 @@ tcp_accept(Context* context, int listen_fd)
 static int
 shell_cmd(const char* substs[][2], const char* args_str)
 {
-    extern char* environ[];
-    char*        args[64];
-    char         cmdbuf[4096];
-    pid_t        child;
-    size_t       args_i = 0, cmdbuf_i = 0, args_str_i, i;
-    int          c, exit_status, is_space = 1;
+    char*  args[64];
+    char   cmdbuf[4096];
+    pid_t  child;
+    size_t args_i = 0, cmdbuf_i = 0, args_str_i, i;
+    int    c, exit_status, is_space = 1;
 
     errno = ENOSPC;
     for (args_str_i = 0; (c = args_str[args_str_i]) != 0; args_str_i++) {
