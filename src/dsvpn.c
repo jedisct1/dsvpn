@@ -62,6 +62,8 @@ typedef struct Context_ {
     const char*   wanted_name;
     const char*   local_tun_ip;
     const char*   remote_tun_ip;
+    const char*   local_tun_ip6;
+    const char*   remote_tun_ip6;
     const char*   ext_ip;
     const char*   ext_port;
     const char*   ext_if_name;
@@ -615,7 +617,9 @@ shell_cmd(const char* substs[][2], const char* args_str)
 static int
 set_firewall_rules(const Context* context)
 {
-    const char* substs[][2] = { { "$LOCAL_TUN_IP", context->local_tun_ip },
+    const char* substs[][2] = { { "$LOCAL_TUN_IP6", context->local_tun_ip6 },
+                                { "$REMOTE_TUN_IP6", context->remote_tun_ip6 },
+                                { "$LOCAL_TUN_IP", context->local_tun_ip },
                                 { "$REMOTE_TUN_IP", context->remote_tun_ip },
                                 { "$EXT_IP", context->ext_ip },
                                 { "$EXT_PORT", context->ext_port },
@@ -645,22 +649,24 @@ set_firewall_rules(const Context* context)
 #ifdef __APPLE__
         cmds = (const char*[]){
             "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
-            "route add -inet6 -blackhole 0000::/1 ::1",
-            "route add -inet6 -blackhole 8000::/1 ::1",
+            "ifconfig $IF_NAME inet6 $LOCAL_TUN_IP6 $REMOTE_TUN_IP6 up",
             "route add $EXT_IP $EXT_GW_IP",
             "route add 0/1 $REMOTE_TUN_IP",
             "route add 128/1 $REMOTE_TUN_IP",
+            "route add -inet6 0000::/1 $REMOTE_TUN_IP6",
+            "route add -inet6 8000::/1 $REMOTE_TUN_IP6",
             NULL
         };
 #elif defined(__linux__)
         cmds = (const char*[]){
             "ip link set dev $IF_NAME up",
             "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
-            "ip -6 route add blackhole 0000::/1",
-            "ip -6 route add blackhole 8000::/1",
+            "ip -6 addr add $LOCAL_TUN_IP6 peer $REMOTE_TUN_IP6 dev $IF_NAME",
             "ip route add $EXT_IP via $EXT_GW_IP",
             "ip route add 0/1 via $REMOTE_TUN_IP",
             "ip route add 128/1 via $REMOTE_TUN_IP",
+            "ip -6 route add 0/1 via $REMOTE_TUN_IP6",
+            "ip -6 route add 128/1 via $REMOTE_TUN_IP6",
             NULL
         };
 #endif
@@ -915,6 +921,19 @@ usage(void)
     return;
 }
 
+static void
+get_tun6_addresses(Context* context)
+{
+    static char local_tun_ip6[40], remote_tun_ip6[40];
+
+    snprintf(local_tun_ip6, sizeof local_tun_ip6, "64:ff9b::%s",
+             context->local_tun_ip);
+    snprintf(remote_tun_ip6, sizeof remote_tun_ip6, "64:ff9b::%s",
+             context->remote_tun_ip);
+    context->local_tun_ip6  = local_tun_ip6;
+    context->remote_tun_ip6 = remote_tun_ip6;
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -936,6 +955,7 @@ main(int argc, char* argv[])
     context.ext_port      = argv[7];
     context.ext_if_name   = argv[8];
     context.ext_gw_ip     = argv[9];
+    get_tun6_addresses(&context);
 
     context.tun_fd = tun_create(
         context.if_name,
