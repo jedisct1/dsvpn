@@ -76,7 +76,7 @@ typedef struct Context_ {
     uint32_t      uc_st[2][12];
 } Context;
 
-int signal_toggle = 0;
+volatile sig_atomic_t signal_toggle = 0;
 
 static void
 signal_handler() {
