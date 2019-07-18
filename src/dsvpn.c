@@ -77,6 +77,12 @@ typedef struct Context_ {
     uint32_t      uc_st[2][12];
 } Context;
 
+static void
+set_nonblock(const int fd)
+{
+    fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
+}
+
 static ssize_t
 safe_write(const int fd, const void* const buf_, size_t count,
            const int timeout)
@@ -85,12 +91,11 @@ safe_write(const int fd, const void* const buf_, size_t count,
     const char*   buf = (const char*) buf_;
     ssize_t       written;
 
-    pfd.fd     = fd;
-    pfd.events = POLLOUT;
-
     while (count > (size_t) 0) {
         while ((written = write(fd, buf, count)) <= (ssize_t) 0) {
             if (errno == EAGAIN) {
+                pfd.fd     = fd;
+                pfd.events = POLLOUT;
                 if (poll(&pfd, (nfds_t) 1, timeout) == 0) {
                     errno = ETIMEDOUT;
                     goto ret;
@@ -107,24 +112,29 @@ ret:
 }
 
 static ssize_t
-safe_read(const int fd, void* const buf_, size_t count)
+safe_read(const int fd, void* const buf_, size_t count, const int timeout)
 {
+    struct pollfd  pfd;
     unsigned char* buf = (unsigned char*) buf_;
     ssize_t        readnb;
 
     while (count > (ssize_t) 0) {
-        while ((readnb = read(fd, buf, count)) < (ssize_t) 0 && errno == EINTR)
-            ;
-        if (readnb < (ssize_t) 0) {
-            return readnb;
-        }
-        if (readnb == (ssize_t) 0) {
-            break;
+        while ((readnb = read(fd, buf, count)) <= (ssize_t) 0) {
+            if (errno == EAGAIN) {
+                pfd.fd     = fd;
+                pfd.events = POLLIN;
+                if (poll(&pfd, (nfds_t) 1, timeout) == 0) {
+                    errno = ETIMEDOUT;
+                    goto ret;
+                }
+            } else if (errno != EINTR) {
+                goto ret;
+            }
         }
         count -= readnb;
         buf += readnb;
     }
-
+ret:
     return (ssize_t)(buf - (unsigned char*) buf_);
 }
 
@@ -136,8 +146,19 @@ safe_read_partial(const int fd, void* const buf_, const size_t max_count)
 
     while ((readnb = read(fd, buf, max_count)) < (ssize_t) 0 && errno == EINTR)
         ;
-
     return readnb;
+}
+
+static ssize_t
+safe_write_partial(const int fd, void* const buf_, const size_t max_count)
+{
+    unsigned char* const buf = (unsigned char*) buf_;
+    ssize_t              writenb;
+
+    while ((writenb = write(fd, buf, max_count)) < (ssize_t) 0 &&
+           errno == EINTR)
+        ;
+    return writenb;
 }
 
 #ifdef __linux__
@@ -363,7 +384,8 @@ tcp_opts(int fd)
     (void) setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char*) &on, sizeof on);
 #endif
 #ifdef TCP_CONGESTION
-    (void) setsockopt(fd, IPPROTO_TCP, TCP_CONGESTION, OUTER_CONGESTION_CONTROL_ALG,
+    (void) setsockopt(fd, IPPROTO_TCP, TCP_CONGESTION,
+                      OUTER_CONGESTION_CONTROL_ALG,
                       sizeof OUTER_CONGESTION_CONTROL_ALG - 1);
 #endif
 
@@ -489,7 +511,7 @@ server_key_exchange(Context* context, const int client_fd)
 
     memcpy(st, context->uc_kx_st, sizeof st);
     errno = EACCES;
-    if (safe_read_partial(client_fd, pkt1, sizeof pkt1) != sizeof pkt1) {
+    if (safe_read(client_fd, pkt1, sizeof pkt1, -1) != sizeof pkt1) {
         return -1;
     }
     uc_hash(st, h, pkt1, 32 + 8);
@@ -533,11 +555,6 @@ tcp_accept(Context* context, int listen_fd)
                             &client_sa_len)) < 0) {
         return -1;
     }
-    if (context->client_fd != -1) {
-        (void) close(client_fd);
-        errno = EPERM;
-        return -1;
-    }
     if (client_sa_len <= (socklen_t) 0U) {
         (void) close(client_fd);
         errno = EINTR;
@@ -555,7 +572,6 @@ tcp_accept(Context* context, int listen_fd)
         errno = EACCES;
         return -1;
     }
-
     return client_fd;
 }
 
@@ -647,7 +663,7 @@ set_firewall_rules(const Context* context)
 
     if (context->is_server) {
 #ifdef __linux__
-        cmds = (const char*[]){
+        cmds = (const char* []){
             "sysctl net.ipv4.ip_forward=1",
             "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
             "ip link set dev $IF_NAME up",
@@ -662,7 +678,7 @@ set_firewall_rules(const Context* context)
 #endif
     } else {
 #if defined(__APPLE__) || defined(__OpenBSD__)
-        cmds = (const char*[]){
+        cmds = (const char* []){
             "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
             "ifconfig $IF_NAME inet6 $LOCAL_TUN_IP6 $REMOTE_TUN_IP6 prefixlen "
             "128 up",
@@ -674,7 +690,7 @@ set_firewall_rules(const Context* context)
             NULL
         };
 #elif defined(__linux__)
-        cmds = (const char*[]){
+        cmds = (const char* []){
             "sysctl net.ipv4.tcp_congestion_control=bbr",
             "ip link set dev $IF_NAME up",
             "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
@@ -723,8 +739,7 @@ client_key_exchange(Context* context)
         return -1;
     }
     errno = EACCES;
-    if (safe_read_partial(context->client_fd, pkt2, sizeof pkt2) !=
-        sizeof pkt2) {
+    if (safe_read(context->client_fd, pkt2, sizeof pkt2, -1) != sizeof pkt2) {
         return -1;
     }
     uc_hash(st, h, pkt2, 32);
@@ -750,6 +765,7 @@ client_connect(Context* context)
         perror("tcp_client");
         return -1;
     }
+    set_nonblock(context->client_fd);
     if (client_key_exchange(context) != 0) {
         fprintf(stderr, "Authentication failed\n");
         client_disconnect(context);
@@ -771,7 +787,7 @@ client_reconnect(Context* context)
     if (context->is_server) {
         return 0;
     }
-    for (i = 1; i < RECONNECT_ATTEMPTS; i++) {
+    for (i = 0; i < RECONNECT_ATTEMPTS; i++) {
         puts("Trying to reconnect");
         sleep(i);
         if (client_connect(context) == 0) {
@@ -844,7 +860,7 @@ event_loop(Context* context)
     }
     if (fds[POLLFD_CLIENT].revents & POLLIN) {
         uint16_t binlen;
-        if (safe_read(context->client_fd, &binlen, sizeof binlen) !=
+        if (safe_read(context->client_fd, &binlen, sizeof binlen, -1) !=
             sizeof binlen) {
             len = -1;
         } else {
@@ -853,7 +869,7 @@ event_loop(Context* context)
                 len = -1;
             } else {
                 len = safe_read(context->client_fd, buf.tag,
-                                TAG_LEN + (size_t) binlen);
+                                TAG_LEN + (size_t) binlen, -1);
             }
         }
         if (len < TAG_LEN) {
@@ -912,7 +928,7 @@ load_key_file(Context* context, const char* file)
     if ((fd = open(file, O_RDONLY)) == -1) {
         return -1;
     }
-    if (safe_read(fd, key, sizeof key) != sizeof key) {
+    if (safe_read(fd, key, sizeof key, -1) != sizeof key) {
         return -1;
         memset(key, 0, sizeof key);
     }
