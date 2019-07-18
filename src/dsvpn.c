@@ -42,6 +42,7 @@
 #define TAG_LEN 6
 #define MAX_PACKET_LEN 65536
 #define TS_TOLERANCE 7200
+#define CONGESTION_CONTROL_ALG "bbr"
 
 #ifdef NATIVE_BIG_ENDIAN
 #define endian_swap16(x) __builtin_bswap16(x)
@@ -360,6 +361,10 @@ tcp_opts(int fd)
     (void) setsockopt(fd, IPPROTO_TCP, TCP_QUICKACK, (char*) &on, sizeof on);
 #else
     (void) setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char*) &on, sizeof on);
+#endif
+#ifdef TCP_CONGESTION
+    (void) setsockopt(fd, IPPROTO_TCP, TCP_CONGESTION, CONGESTION_CONTROL_ALG,
+                      sizeof CONGESTION_CONTROL_ALG - 1);
 #endif
 
     return 0;
