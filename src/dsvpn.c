@@ -81,12 +81,13 @@ typedef struct Context_ {
     uint32_t      uc_st[2][12];
 } Context;
 
-volatile sig_atomic_t signal_toggle = 0;
+static volatile sig_atomic_t exit_signal_received = 0;
 
 static void
-signal_handler()
+signal_handler(int sig)
 {
-    signal_toggle = 1;
+    (void) sig;
+    exit_signal_received = 1;
 }
 
 static ssize_t
@@ -652,25 +653,12 @@ shell_cmd(const char* substs[][2], const char* args_str)
     return 0;
 }
 
-static int
-set_firewall_rules(const Context* context)
+static const char* const*
+set_firewall_rules_cmds(const Context* context)
 {
-    const char* substs[][2] = { { "$LOCAL_TUN_IP6", context->local_tun_ip6 },
-                                { "$REMOTE_TUN_IP6", context->remote_tun_ip6 },
-                                { "$LOCAL_TUN_IP", context->local_tun_ip },
-                                { "$REMOTE_TUN_IP", context->remote_tun_ip },
-                                { "$EXT_IP", context->ext_ip },
-                                { "$EXT_PORT", context->ext_port },
-                                { "$EXT_IF_NAME", context->ext_if_name },
-                                { "$EXT_GW_IP", context->ext_gw_ip },
-                                { "$IF_NAME", context->if_name },
-                                { NULL, NULL } };
-    const char* const* cmds = NULL;
-    size_t             i;
-
     if (context->is_server) {
 #ifdef __linux__
-        cmds = (const char*[]){
+        static const char* cmds[] = {
             "sysctl net.ipv4.ip_forward=1",
             "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
             "ip link set dev $IF_NAME up",
@@ -682,10 +670,13 @@ set_firewall_rules(const Context* context)
             "ACCEPT",
             NULL
         };
+#else
+        const char**       cmds   = NULL;
 #endif
+        return cmds;
     } else {
 #if defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
-        cmds = (const char*[]){
+        static const char* cmds[] = {
             "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
             "ifconfig $IF_NAME inet6 $LOCAL_TUN_IP6 $REMOTE_TUN_IP6 prefixlen "
             "128 up",
@@ -697,7 +688,7 @@ set_firewall_rules(const Context* context)
             NULL
         };
 #elif defined(__linux__)
-        cmds = (const char*[]){
+        static const char* cmds[] = {
             "sysctl net.ipv4.tcp_congestion_control=bbr",
             "ip link set dev $IF_NAME up",
             "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
@@ -709,41 +700,19 @@ set_firewall_rules(const Context* context)
             "ip -6 route add 128/1 via $REMOTE_TUN_IP6",
             NULL
         };
+#else
+        const char* const* cmds = NULL;
 #endif
+        return cmds;
     }
-    if (cmds == NULL) {
-        fprintf(stderr,
-                "Routing commands for that operating system have not been "
-                "added yet.\n");
-        return 0;
-    }
-    for (i = 0; cmds[i] != NULL; i++) {
-        if (shell_cmd(substs, cmds[i]) != 0) {
-            fprintf(stderr, "Unable to run [%s]: [%s]\n", cmds[i],
-                    strerror(errno));
-            return -1;
-        }
-    }
-    return 0;
 }
 
-static int
-del_firewall_rules(const Context* context)
+static const char* const*
+unset_firewall_rules_cmds(const Context* context)
 {
-    const char* substs[][2] = { { "$LOCAL_TUN_IP", context->local_tun_ip },
-                                { "$REMOTE_TUN_IP", context->remote_tun_ip },
-                                { "$EXT_IP", context->ext_ip },
-                                { "$EXT_PORT", context->ext_port },
-                                { "$EXT_IF_NAME", context->ext_if_name },
-                                { "$EXT_GW_IP", context->ext_gw_ip },
-                                { "$IF_NAME", context->if_name },
-                                { NULL, NULL } };
-    const char* const* cmds = NULL;
-    size_t             i;
-
     if (context->is_server) {
 #ifdef __linux__
-        cmds = (const char*[]){
+        static const char* cmds[] = {
             "ip addr del $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
             "iptables -t nat -D POSTROUTING -o $EXT_IF_NAME -s $REMOTE_TUN_IP "
             "-j MASQUERADE",
@@ -753,21 +722,45 @@ del_firewall_rules(const Context* context)
             "ACCEPT",
             NULL
         };
+#else
+        const char* const* cmds   = NULL;
 #endif
+        return cmds;
     } else {
 #ifdef __APPLE__
-        cmds = (const char*[]){ "route delete $EXT_IP $EXT_GW_IP",
-                                "route delete 0/1 $REMOTE_TUN_IP",
-                                "route delete 128/1 $REMOTE_TUN_IP", NULL };
+        static const char* cmds[] = { "route delete $EXT_IP $EXT_GW_IP",
+                                      "route delete 0/1 $REMOTE_TUN_IP",
+                                      "route delete 128/1 $REMOTE_TUN_IP",
+                                      NULL };
 #elif defined(__linux__)
-        cmds = (const char*[]){
+        static const char* cmds[] = {
             "ip addr delete $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
             "ip route delete $EXT_IP via $EXT_GW_IP",
             "ip route delete 0/1 via $REMOTE_TUN_IP",
             "ip route delete 128/1 via $REMOTE_TUN_IP", NULL
         };
+#else
+        const char* const* cmds = NULL;
 #endif
+        return cmds;
     }
+}
+
+static int
+firewall_rules(Context* context, int set)
+{
+    const char* substs[][2] = { { "$LOCAL_TUN_IP", context->local_tun_ip },
+                                { "$REMOTE_TUN_IP", context->remote_tun_ip },
+                                { "$EXT_IP", context->ext_ip },
+                                { "$EXT_PORT", context->ext_port },
+                                { "$EXT_IF_NAME", context->ext_if_name },
+                                { "$EXT_GW_IP", context->ext_gw_ip },
+                                { "$IF_NAME", context->if_name },
+                                { NULL, NULL } };
+    const char* const* cmds;
+    size_t             i;
+
+    cmds = (set ? set_firewall_rules_cmds : unset_firewall_rules_cmds)(context);
     if (cmds == NULL) {
         fprintf(stderr,
                 "Routing commands for that operating system have not been "
@@ -858,7 +851,7 @@ client_reconnect(Context* context)
     if (context->is_server) {
         return 0;
     }
-    for (i = 0; i < RECONNECT_ATTEMPTS; i++) {
+    for (i = 0; exit_signal_received == 0 && i < RECONNECT_ATTEMPTS; i++) {
         puts("Trying to reconnect");
         sleep(i);
         if (client_connect(context) == 0) {
@@ -869,22 +862,8 @@ client_reconnect(Context* context)
 }
 
 static int
-exit_handler(Context* context)
-{
-    if (del_firewall_rules(context) == -1) {
-        exit(1);
-    } else {
-        exit(0);
-    }
-}
-
-static int
 event_loop(Context* context)
 {
-    if (signal_toggle == 1) {
-        exit_handler(context);
-    }
-
     struct __attribute__((aligned(16))) {
         unsigned char _pad[16 - TAG_LEN - 2];
         unsigned char len[2];
@@ -896,6 +875,9 @@ event_loop(Context* context)
     int                  found_fds;
     int                  new_client_fd;
 
+    if (exit_signal_received != 0) {
+        return -2;
+    }
     if ((found_fds = poll(fds, POLLFD_COUNT, 1500)) == -1) {
         perror("poll");
         return -1;
@@ -1070,8 +1052,6 @@ main(int argc, char* argv[])
     Context context;
 
     (void) safe_read_partial;
-    signal(SIGINT, signal_handler);
-    signal(SIGTERM, signal_handler);
 
     if (argc != 10) {
         usage();
@@ -1102,11 +1082,15 @@ main(int argc, char* argv[])
     if (tun_set_mtu(context.if_name, DEFAULT_MTU) != 0) {
         perror("mtu");
     }
-    if (set_firewall_rules(&context) != 0) {
+    if (firewall_rules(&context, 1) != 0) {
         return -1;
     }
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
     if (doit(&context) != 0) {
         return -1;
     }
+    firewall_rules(&context, 0);
+
     return 0;
 }
