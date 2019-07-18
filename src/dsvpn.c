@@ -73,6 +73,7 @@ typedef struct Context_ {
     int           tun_fd;
     int           client_fd;
     int           listen_fd;
+    int           congestion;
     struct pollfd fds[3];
     uint32_t      uc_kx_st[12];
     uint32_t      uc_st[2][12];
@@ -137,17 +138,6 @@ safe_read(const int fd, void* const buf_, size_t count, const int timeout)
     }
 ret:
     return (ssize_t)(buf - (unsigned char*) buf_);
-}
-
-static ssize_t
-safe_read_partial(const int fd, void* const buf_, const size_t max_count)
-{
-    unsigned char* const buf = (unsigned char*) buf_;
-    ssize_t              readnb;
-
-    while ((readnb = read(fd, buf, max_count)) < (ssize_t) 0 && errno == EINTR)
-        ;
-    return readnb;
 }
 
 static ssize_t
@@ -567,6 +557,7 @@ tcp_accept(Context* context, int listen_fd)
         errno = err;
         return -1;
     }
+    context->congestion = 0;
     if (server_key_exchange(context, client_fd) != 0) {
         fprintf(stderr, "Authentication failed\n");
         (void) close(client_fd);
@@ -769,6 +760,7 @@ client_connect(Context* context)
         return -1;
     }
     set_nonblock(context->client_fd);
+    context->congestion = 0;
     if (client_key_exchange(context) != 0) {
         fprintf(stderr, "Authentication failed\n");
         client_disconnect(context);
@@ -815,6 +807,7 @@ event_loop(Context* context)
     int                  new_client_fd;
 
     if ((found_fds = poll(fds, POLLFD_COUNT, 1500)) == -1) {
+        perror("poll");
         return -1;
     }
     if (fds[POLLFD_LISTENER].revents & POLLIN) {
@@ -840,17 +833,31 @@ event_loop(Context* context)
     if (fds[POLLFD_TUN].revents & POLLIN) {
         len = tun_read(context->tun_fd, buf.data, sizeof buf.data);
         if (len <= 0) {
+            perror("tun_read");
             return -1;
+        }
+        if (context->congestion) {
+            context->congestion = 0;
+            return 0;
         }
         if (context->client_fd != -1) {
             unsigned char tag_full[16];
+            ssize_t       writenb;
             uint16_t      binlen = endian_swap16((uint16_t) len);
 
             memcpy(buf.len, &binlen, 2);
             uc_encrypt(context->uc_st[0], buf.data, len, tag_full);
             memcpy(buf.tag, tag_full, TAG_LEN);
-            if (safe_write(context->client_fd, buf.len, 2U + TAG_LEN + len,
-                           TIMEOUT) < 0) {
+            writenb = safe_write_partial(context->client_fd, buf.len,
+                                         2U + TAG_LEN + len);
+            if (writenb != (ssize_t)(2U + TAG_LEN + len)) {
+                if (errno == EAGAIN) {
+                    context->congestion = 1;
+                    writenb = safe_write(context->client_fd, buf.len,
+                                         2U + TAG_LEN + len, TIMEOUT);
+                }
+            }
+            if (writenb != (ssize_t)(2U + TAG_LEN + len)) {
                 perror("safe_write (client)");
                 return client_reconnect(context);
             }
