@@ -44,6 +44,7 @@
 #define TS_TOLERANCE 7200
 #define TIMEOUT (120 * 1000)
 #define OUTER_CONGESTION_CONTROL_ALG "bbr"
+#define BB_CONTROL 0
 
 #ifdef NATIVE_BIG_ENDIAN
 #define endian_swap16(x) __builtin_bswap16(x)
@@ -79,12 +80,6 @@ typedef struct Context_ {
     uint32_t      uc_st[2][12];
 } Context;
 
-static void
-set_nonblock(const int fd)
-{
-    fcntl(fd, F_SETFL, fcntl(fd, F_GETFL, 0) | O_NONBLOCK);
-}
-
 static ssize_t
 safe_write(const int fd, const void* const buf_, size_t count,
            const int timeout)
@@ -94,7 +89,7 @@ safe_write(const int fd, const void* const buf_, size_t count,
     ssize_t       written;
 
     while (count > (size_t) 0) {
-        while ((written = write(fd, buf, count)) <= (ssize_t) 0) {
+        while ((written = write(fd, buf, count)) < (ssize_t) 0) {
             if (errno == EAGAIN) {
                 pfd.fd     = fd;
                 pfd.events = POLLOUT;
@@ -121,7 +116,7 @@ safe_read(const int fd, void* const buf_, size_t count, const int timeout)
     ssize_t        readnb;
 
     while (count > (ssize_t) 0) {
-        while ((readnb = read(fd, buf, count)) <= (ssize_t) 0) {
+        while ((readnb = read(fd, buf, count)) < (ssize_t) 0) {
             if (errno == EAGAIN) {
                 pfd.fd     = fd;
                 pfd.events = POLLIN;
@@ -770,7 +765,10 @@ client_connect(Context* context)
         perror("tcp_client");
         return -1;
     }
-    set_nonblock(context->client_fd);
+#if BB_CONTROL
+    fcntl(context->client_fd, F_SETFL,
+          fcntl(context->client_fd, F_GETFL, 0) | O_NONBLOCK);
+#endif
     context->congestion = 0;
     if (client_key_exchange(context) != 0) {
         fprintf(stderr, "Authentication failed\n");
@@ -781,6 +779,7 @@ client_connect(Context* context)
                                                    .events = POLLIN,
                                                    .revents = 0 };
     puts("Connected");
+
     return 0;
 }
 
@@ -881,6 +880,7 @@ event_loop(Context* context)
     }
     if (fds[POLLFD_CLIENT].revents & POLLIN) {
         uint16_t binlen;
+
         if (safe_read(context->client_fd, &binlen, sizeof binlen, TIMEOUT) !=
             sizeof binlen) {
             len = -1;
