@@ -994,6 +994,7 @@ main(int argc, char* argv[])
     Context context;
 
     signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
 
     if (argc != 10) {
         usage();
