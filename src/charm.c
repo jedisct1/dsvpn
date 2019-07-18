@@ -294,7 +294,7 @@ void
 uc_randombytes_buf(void *buf, size_t len)
 {
 #ifdef __linux__
-    if ((size_t) syscall(SYS_getrandom, buf, (int) count, 0) != count) {
+    if ((size_t) syscall(SYS_getrandom, buf, (int) len, 0) != len) {
         abort();
     }
 #else
