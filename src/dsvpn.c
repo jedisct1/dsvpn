@@ -651,7 +651,7 @@ set_firewall_rules(const Context* context)
         };
 #endif
     } else {
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(__OpenBSD__)
         cmds = (const char*[]){
             "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
             "ifconfig $IF_NAME inet6 $LOCAL_TUN_IP6 $REMOTE_TUN_IP6 prefixlen "
