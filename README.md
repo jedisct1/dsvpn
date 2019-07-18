@@ -14,6 +14,7 @@ Features:
 * No external dependencies
 * Works out of the box. No lousy documentation to read. No configuration file. No post-configuration. Run a single-line command on the server, a similar one on the client and you're done. No firewall and routing rules to manually mess up with.
 * Works with Linux (client, server), MacOS (client) and OpenBSD (client). Adding support for other operating systems is trivial.
+* Blocks IPv6 on the client to prevent IPv6 leaks.
 
 Next:
 
