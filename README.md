@@ -25,6 +25,7 @@ Maybe:
 
 * The ability to run custom commands after the link is up
 * Non-blocking key exchange, support for multiple clients
+* Dropping tunneled packets when the outer layer is dropping packets
 
 Non-features:
 
