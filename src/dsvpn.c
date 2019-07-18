@@ -675,6 +675,7 @@ set_firewall_rules(const Context* context)
         };
 #elif defined(__linux__)
         cmds = (const char*[]){
+            "sysctl net.ipv4.tcp_congestion_control=bbr",
             "ip link set dev $IF_NAME up",
             "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
             "ip -6 addr add $LOCAL_TUN_IP6 peer $REMOTE_TUN_IP6 dev $IF_NAME",
