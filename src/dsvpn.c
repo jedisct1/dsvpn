@@ -224,6 +224,24 @@ tun_create(char if_name[IFNAMSIZ], const char* wanted_name)
     }
     return tun_create_by_id(if_name, id);
 }
+#else
+static int
+tun_create(char if_name[IFNAMSIZ], const char* wanted_name)
+{
+    char path[64];
+
+    if (wanted_name == NULL) {
+        fprintf(stderr,
+                "The tunnel device name must be specified on that platform "
+                "(try 'tun0')\n");
+        errno = EINVAL;
+        return -1;
+    }
+    snprintf(if_name, IFNAMSIZ, "%s", wanted_name);
+    snprintf(path, sizeof path, "/dev/%s", wanted_name);
+
+    return open(path, O_RDWR);
+}
 #endif
 
 static int
@@ -255,7 +273,7 @@ tun_write(int fd, const void* data, size_t size)
 {
     return safe_write(fd, data, size, -1);
 }
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__OpenBSD__)
 static ssize_t
 tun_read(int fd, void* data, size_t size)
 {
