@@ -141,6 +141,17 @@ ret:
 }
 
 static ssize_t
+safe_read_partial(const int fd, void* const buf_, const size_t max_count)
+{
+    unsigned char* const buf = (unsigned char*) buf_;
+    ssize_t              readnb;
+
+    while ((readnb = read(fd, buf, max_count)) < (ssize_t) 0 && errno == EINTR)
+        ;
+    return readnb;
+}
+
+static ssize_t
 safe_write_partial(const int fd, void* const buf_, const size_t max_count)
 {
     unsigned char* const buf = (unsigned char*) buf_;
@@ -978,6 +989,7 @@ main(int argc, char* argv[])
 {
     Context context;
 
+    (void) safe_read_partial;
     if (argc != 10) {
         usage();
         return 0;
