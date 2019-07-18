@@ -88,18 +88,6 @@ signal_handler() {
     signal_toggle = 1;
 }
 
-static void
-randombytes_buf(void* buf, size_t count)
-{
-#ifdef __linux__
-    if ((size_t) getrandom(buf, count, 0) != count) {
-        abort();
-    }
-#else
-    arc4random_buf(buf, count);
-#endif
-}
-
 static ssize_t
 safe_write(const int fd, const void* const buf_, size_t count,
            const int timeout)
