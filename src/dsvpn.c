@@ -84,7 +84,8 @@ typedef struct Context_ {
 volatile sig_atomic_t signal_toggle = 0;
 
 static void
-signal_handler() {
+signal_handler()
+{
     signal_toggle = 1;
 }
 
@@ -669,7 +670,7 @@ set_firewall_rules(const Context* context)
 
     if (context->is_server) {
 #ifdef __linux__
-        cmds = (const char* []){
+        cmds = (const char*[]){
             "sysctl net.ipv4.ip_forward=1",
             "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
             "ip link set dev $IF_NAME up",
@@ -684,7 +685,7 @@ set_firewall_rules(const Context* context)
 #endif
     } else {
 #if defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
-        cmds = (const char* []){
+        cmds = (const char*[]){
             "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
             "ifconfig $IF_NAME inet6 $LOCAL_TUN_IP6 $REMOTE_TUN_IP6 prefixlen "
             "128 up",
@@ -696,7 +697,7 @@ set_firewall_rules(const Context* context)
             NULL
         };
 #elif defined(__linux__)
-        cmds = (const char* []){
+        cmds = (const char*[]){
             "sysctl net.ipv4.tcp_congestion_control=bbr",
             "ip link set dev $IF_NAME up",
             "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
@@ -742,7 +743,7 @@ del_firewall_rules(const Context* context)
 
     if (context->is_server) {
 #ifdef __linux__
-        cmds = (const char* []){
+        cmds = (const char*[]){
             "ip addr del $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
             "iptables -t nat -D POSTROUTING -o $EXT_IF_NAME -s $REMOTE_TUN_IP "
             "-j MASQUERADE",
@@ -755,17 +756,15 @@ del_firewall_rules(const Context* context)
 #endif
     } else {
 #ifdef __APPLE__
-        cmds = (const char* []){
-            "route delete $EXT_IP $EXT_GW_IP", "route delete 0/1 $REMOTE_TUN_IP",
-            "route delete 128/1 $REMOTE_TUN_IP", NULL
-        };
+        cmds = (const char*[]){ "route delete $EXT_IP $EXT_GW_IP",
+                                "route delete 0/1 $REMOTE_TUN_IP",
+                                "route delete 128/1 $REMOTE_TUN_IP", NULL };
 #elif defined(__linux__)
-        cmds = (const char* []){
+        cmds = (const char*[]){
             "ip addr delete $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
             "ip route delete $EXT_IP via $EXT_GW_IP",
             "ip route delete 0/1 via $REMOTE_TUN_IP",
-            "ip route delete 128/1 via $REMOTE_TUN_IP",
-            NULL
+            "ip route delete 128/1 via $REMOTE_TUN_IP", NULL
         };
 #endif
     }
@@ -870,8 +869,9 @@ client_reconnect(Context* context)
 }
 
 static int
-exit_handler(Context* context) {
-    if(del_firewall_rules(context) == -1) {
+exit_handler(Context* context)
+{
+    if (del_firewall_rules(context) == -1) {
         exit(1);
     } else {
         exit(0);
