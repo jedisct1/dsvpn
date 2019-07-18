@@ -23,7 +23,7 @@
 
 #ifdef __linux__
 #include <linux/if_tun.h>
-#include <sys/random.h>
+#include <sys/syscall.h>
 #endif
 
 #ifdef __APPLE__
@@ -82,7 +82,7 @@ static void
 randombytes_buf(void* buf, size_t count)
 {
 #ifdef __linux__
-    if ((size_t) getrandom(buf, count, 0) != count) {
+    if ((size_t) syscall(SYS_getrandom, buf, (int) count, 0) != count) {
         abort();
     }
 #else
