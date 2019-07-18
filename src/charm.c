@@ -5,7 +5,11 @@
 #include <x86intrin.h>
 #endif
 #ifdef __linux__
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 #include <sys/syscall.h>
+#include <unistd.h>
 #endif
 
 #include "charm.h"
