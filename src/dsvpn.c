@@ -44,7 +44,7 @@
 #define TS_TOLERANCE 7200
 #define TIMEOUT (120 * 1000)
 #define OUTER_CONGESTION_CONTROL_ALG "bbr"
-#define BB_CONTROL 0
+#define BUFFERBLOAT_CONTROL 0
 
 #ifdef NATIVE_BIG_ENDIAN
 #define endian_swap16(x) __builtin_bswap16(x)
@@ -765,7 +765,7 @@ client_connect(Context* context)
         perror("tcp_client");
         return -1;
     }
-#if BB_CONTROL
+#if BUFFERBLOAT_CONTROL
     fcntl(context->client_fd, F_SETFL,
           fcntl(context->client_fd, F_GETFL, 0) | O_NONBLOCK);
 #endif
