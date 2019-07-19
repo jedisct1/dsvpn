@@ -81,7 +81,7 @@ typedef struct Context_ {
     uint32_t      uc_st[2][12];
 } Context;
 
-static volatile sig_atomic_t exit_signal_received = 0;
+static volatile sig_atomic_t exit_signal_received;
 
 static void
 signal_handler(int sig)
@@ -727,7 +727,9 @@ firewall_rules_cmds(const Context* context)
 static int
 firewall_rules(Context* context, int set)
 {
-    const char* substs[][2] = { { "$LOCAL_TUN_IP", context->local_tun_ip },
+    const char* substs[][2] = { { "$LOCAL_TUN_IP6", context->local_tun_ip6 },
+                                { "$REMOTE_TUN_IP6", context->remote_tun_ip6 },
+                                { "$LOCAL_TUN_IP", context->local_tun_ip },
                                 { "$REMOTE_TUN_IP", context->remote_tun_ip },
                                 { "$EXT_IP", context->ext_ip },
                                 { "$EXT_PORT", context->ext_port },
@@ -858,7 +860,6 @@ event_loop(Context* context)
         return -2;
     }
     if ((found_fds = poll(fds, POLLFD_COUNT, 1500)) == -1) {
-        perror("poll");
         return -1;
     }
     if (fds[POLLFD_LISTENER].revents & POLLIN) {
