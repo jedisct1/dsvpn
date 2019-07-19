@@ -401,7 +401,7 @@ get_default_gw_ip(void)
     static char gw[64];
 #ifdef __APPLE__
     return read_from_shell_command(
-        gw, sizeof gw, "netstat -rn|awk '/^default/{print $2}'|head -n1");
+        gw, sizeof gw, "route get default|awk '/gateway/{print $2}'|head -n1");
 #elif defined(__linux__)
     return read_from_shell_command(
         gw, sizeof gw, "ip route show default|awk '/default/{print $3}'");
@@ -420,7 +420,7 @@ get_default_ext_if_name(void)
 #ifdef __APPLE__
     return read_from_shell_command(
         if_name, sizeof if_name,
-        "netstat -rn|awk '/^default/{print $6}'|head -n1");
+        "route get default|awk '/interface/{print $2}'|head -n1");
 #elif defined(__linux__)
     return read_from_shell_command(
         if_name, sizeof if_name,
