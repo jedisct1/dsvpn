@@ -59,7 +59,7 @@ Here, I use port `1959`. Everything else is set to the default values. If you wa
 sudo ./dsvpn client vpn.key 34.216.127.34 1959
 ```
 
-This is a MacOS client, connecting to the VPN server `34.216.127.34` on port `1959`. The port number is optional as well.
+This is a MacOS client, connecting to the VPN server `34.216.127.34` on port `1959`. The port number is optional here as well.
 
 On MacOS, the VPN server can be specified as a host name. Linux currently requires an IP address.
 
