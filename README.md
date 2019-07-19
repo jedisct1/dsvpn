@@ -45,7 +45,25 @@ dd if=/dev/urandom of=vpn.key count=1 bs=32
 
 And copy it on the server and the client.
 
-## Usage
+## Example usage on the server
+
+```sh
+sudo ./dsvpn server vpn.key auto 1959
+```
+
+Here, I use port `1959`. Everything else is set to the default values. If you want to use the default port (`443`), it doesn't even have to be specified.
+
+## Example usage on the client
+
+```sh
+sudo ./dsvpn client vpn.key 34.216.127.34 1959
+```
+
+This is a MacOS client, connecting to the VPN server `34.216.127.34` on port `1959`.
+
+On MacOS, the VPN server can be specified as a host name. Linux currently requires an IP address.
+
+## Advanced configuration
 
 ```text
 dsvpn   "server"
@@ -64,7 +82,7 @@ dsvpn   "client"
         <tun interface>|"auto"
         <local tun ip>|"auto"
         <remote tun ip>|"auto"
-        <gateway ip>"auto"
+        <gateway ip>|"auto"
 ```
 
 * `server`|`client`: use `server` on the server, and `client` on clients.
@@ -78,24 +96,6 @@ dsvpn   "client"
 * `<gateway ip>` (client only): the internal router IP address. Once again, the first line printed by `netstat -rn` will tell you (`gateway`).
 
 If all the remaining parameters of a command would be `auto`, they don't have to be specified.
-
-## Example usage on the server
-
-```sh
-sudo ./dsvpn server vpn.key auto 1959
-```
-
-Here, I use port `1959`. Everything else is set to the default values. If you want to use the default port (`443`), it doesn't even have to be specified.
-
-## Example usage on the client
-
-```sh
-sudo ./dsvpn client vpn.key 34.216.127.34 1959
-```
-
-This is a MacOS client, connecting to the VPN server `34.216.127.34` on port `1959`.
-
-On MacOS, the VPN server can be specified as a host name. Linux currently requires an IP address.
 
 ## That's it
 
