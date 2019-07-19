@@ -709,10 +709,7 @@ firewall_rules_cmds(const Context* context)
                            "ip -6 route add 0/1 via $REMOTE_TUN_IP6",
                            "ip -6 route add 128/1 via $REMOTE_TUN_IP6",
                            NULL },
-           *unset_cmds[] = {
-               "ip addr delete $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
-               "ip route delete $EXT_IP via $EXT_GW_IP", NULL
-           };
+           *unset_cmds[] = { "ip route del $EXT_IP via $EXT_GW_IP", NULL };
 #else
         static const char *const *set_cmds = NULL, *const *unset_cmds = NULL;
 #endif
