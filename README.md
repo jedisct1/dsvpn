@@ -25,10 +25,15 @@ Maybe:
 
 * The ability to run custom commands after the link is up
 * Support for multiple clients
+* `pledge()`, `chroot()`, non-root.
 
 Non-features:
 
 * Anything else. Including supporting operating systems I don't use.
+
+Never ever:
+
+* Anything including the `systemd` characters sequence.
 
 ## Installation
 
