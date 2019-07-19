@@ -700,23 +700,23 @@ firewall_rules_cmds(const Context* context)
                    NULL },
    *unset_cmds[] = { "route delete $EXT_IP $EXT_GW_IP", NULL };
 #elif defined(__linux__)
-        static const char
-            *set_cmds     = { "sysctl net.ipv4.tcp_congestion_control=bbr",
-                          "ip link set dev $IF_NAME up",
-                          "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev "
-                          "$IF_NAME",
-                          "ip -6 addr add $LOCAL_TUN_IP6 peer $REMOTE_TUN_IP6 "
-                          "dev $IF_NAME",
-                          "ip route add $EXT_IP via $EXT_GW_IP",
-                          "ip route add 0/1 via $REMOTE_TUN_IP",
-                          "ip route add 128/1 via $REMOTE_TUN_IP",
-                          "ip -6 route add 0/1 via $REMOTE_TUN_IP6",
-                          "ip -6 route add 128/1 via $REMOTE_TUN_IP6",
-                          NULL },
-            *unset_cmds[] = {
-                "ip addr delete $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
-                "ip route delete $EXT_IP via $EXT_GW_IP", NULL
-            };
+        static const char *
+            set_cmds[]   = { "sysctl net.ipv4.tcp_congestion_control=bbr",
+                           "ip link set dev $IF_NAME up",
+                           "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev "
+                           "$IF_NAME",
+                           "ip -6 addr add $LOCAL_TUN_IP6 peer $REMOTE_TUN_IP6 "
+                           "dev $IF_NAME",
+                           "ip route add $EXT_IP via $EXT_GW_IP",
+                           "ip route add 0/1 via $REMOTE_TUN_IP",
+                           "ip route add 128/1 via $REMOTE_TUN_IP",
+                           "ip -6 route add 0/1 via $REMOTE_TUN_IP6",
+                           "ip -6 route add 128/1 via $REMOTE_TUN_IP6",
+                           NULL },
+           *unset_cmds[] = {
+               "ip addr delete $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
+               "ip route delete $EXT_IP via $EXT_GW_IP", NULL
+           };
 #else
         static const char *const *set_cmds = NULL, *const *unset_cmds = NULL;
 #endif
