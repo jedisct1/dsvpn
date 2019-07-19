@@ -19,11 +19,12 @@ Features:
 Next:
 
 * Optimized ARM (NEON) implementation
+* Make everything non-blocking
 
 Maybe:
 
 * The ability to run custom commands after the link is up
-* Non-blocking key exchange, support for multiple clients
+* Support for multiple clients
 
 Non-features:
 
