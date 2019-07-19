@@ -57,9 +57,7 @@ dsvpn   "server"
         <external port>
         <external interface>|"auto"
         <external gateway ip>|"auto"
-```
 
-```text
 dsvpn   "client"
         <key file>
         <tun interface>|"auto"
@@ -71,7 +69,7 @@ dsvpn   "client"
         <external gateway ip>
 ```
 
-* `server`|`client`: either `server` or `client`.
+* `server`|`client`: use `server` on the server, and `client` on clients.
 * `<key file>`: path to the file with the secret key (e.g. `vpn.key`).
 * `<tun interface>`: this is the name of the VPN interface. On Linux, you can set it to anything. Or MacOS, it has to follow a more boring pattern. If you feel lazy, just use `auto` here.
 * `<local tun ip>`: local IP address of the tunnel. Use any private IP address that you don't use here. For some reason, I tend to pick `192.168.192.254` for the server, and `192.168.192.1` for the client.
