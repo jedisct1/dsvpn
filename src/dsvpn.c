@@ -76,6 +76,7 @@ typedef struct Context_ {
     int           client_fd;
     int           listen_fd;
     int           congestion;
+    int           firewall_rules_set;
     struct pollfd fds[3];
     uint32_t      uc_kx_st[12];
     uint32_t      uc_st[2][12];
@@ -106,7 +107,7 @@ safe_write(const int fd, const void* const buf_, size_t count,
                 if (poll(&pfd, (nfds_t) 1, timeout) <= 0) {
                     return (ssize_t) -1;
                 }
-            } else if (errno != EINTR) {
+            } else if (errno != EINTR || exit_signal_received) {
                 return (ssize_t) -1;
             }
         }
@@ -131,7 +132,7 @@ safe_read(const int fd, void* const buf_, size_t count, const int timeout)
                 if (poll(&pfd, (nfds_t) 1, timeout) <= 0) {
                     return (ssize_t) -1;
                 }
-            } else if (errno != EINTR) {
+            } else if (errno != EINTR || exit_signal_received) {
                 return (ssize_t) -1;
             }
         }
@@ -147,7 +148,8 @@ safe_read_partial(const int fd, void* const buf_, const size_t max_count)
     unsigned char* const buf = (unsigned char*) buf_;
     ssize_t              readnb;
 
-    while ((readnb = read(fd, buf, max_count)) < (ssize_t) 0 && errno == EINTR)
+    while ((readnb = read(fd, buf, max_count)) < (ssize_t) 0 &&
+           errno == EINTR && !exit_signal_received)
         ;
     return readnb;
 }
@@ -159,7 +161,7 @@ safe_write_partial(const int fd, void* const buf_, const size_t max_count)
     ssize_t              writenb;
 
     while ((writenb = write(fd, buf, max_count)) < (ssize_t) 0 &&
-           errno == EINTR)
+           errno == EINTR && !exit_signal_received)
         ;
     return writenb;
 }
@@ -325,25 +327,16 @@ tun_read(int fd, void* data, size_t size)
     return ret - sizeof family;
 }
 
-static inline uint8_t
-ip_get_version(const uint8_t* data, size_t size)
-{
-    if (size < 20) {
-        return 0;
-    }
-    return data[0] >> 4;
-}
-
 static ssize_t
 tun_write(int fd, const void* data, size_t size)
 {
     uint32_t family;
     ssize_t  ret;
 
-    if (size <= 0) {
+    if (size < 20) {
         return 0;
     }
-    switch (ip_get_version(data, size)) {
+    switch (*(const uint8_t*) data >> 4) {
     case 4:
         family = htonl(AF_INET);
         break;
@@ -391,7 +384,6 @@ tcp_opts(int fd)
                       OUTER_CONGESTION_CONTROL_ALG,
                       sizeof OUTER_CONGESTION_CONTROL_ALG - 1);
 #endif
-
     return 0;
 }
 
@@ -733,9 +725,11 @@ firewall_rules(Context* context, int set)
     const char* const* cmds;
     size_t             i;
 
-    cmds = (set ? firewall_rules_cmds(context).set
-                : firewall_rules_cmds(context).unset);
-    if (cmds == NULL) {
+    if (context->firewall_rules_set == set) {
+        return 0;
+    }
+    if ((cmds = (set ? firewall_rules_cmds(context).set
+                     : firewall_rules_cmds(context).unset)) == NULL) {
         fprintf(stderr,
                 "Routing commands for that operating system have not been "
                 "added yet.\n");
@@ -748,6 +742,7 @@ firewall_rules(Context* context, int set)
             return -1;
         }
     }
+    context->firewall_rules_set = set;
     return 0;
 }
 
@@ -808,6 +803,7 @@ client_connect(Context* context)
         client_disconnect(context);
         return -1;
     }
+    firewall_rules(context, 1);
     context->fds[POLLFD_CLIENT] = (struct pollfd){ .fd     = context->client_fd,
                                                    .events = POLLIN,
                                                    .revents = 0 };
@@ -1030,6 +1026,7 @@ main(int argc, char* argv[])
         usage();
         return 0;
     }
+    memset(&context, 0, sizeof context);
     context.is_server = strcmp(argv[1], "server") == 0;
     if (load_key_file(&context, argv[2]) != 0) {
         fprintf(stderr, "Unable to load the key file [%s]\n", argv[3]);
@@ -1055,7 +1052,7 @@ main(int argc, char* argv[])
     if (tun_set_mtu(context.if_name, DEFAULT_MTU) != 0) {
         perror("mtu");
     }
-    if (firewall_rules(&context, 1) != 0) {
+    if (context.is_server && firewall_rules(&context, 1) != 0) {
         return -1;
     }
     signal(SIGINT, signal_handler);
