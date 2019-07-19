@@ -53,8 +53,8 @@ dsvpn   "server"
         <tun interface>|"auto"
         <local tun ip>
         <remote tun ip>
-        <external host>|"auto"
-        <external port>
+        <vpn server ip>|"auto"
+        <vpn server port>
         <external interface>
         <external gateway ip>|"auto"
 
@@ -63,8 +63,8 @@ dsvpn   "client"
         <tun interface>|"auto"
         <local tun ip>
         <remote tun ip>
-        <external host>
-        <external port>
+        <vpn server ip>
+        <vpn server port>
         <external interface>|"auto"
         <external gateway ip>
 ```
@@ -74,8 +74,8 @@ dsvpn   "client"
 * `<tun interface>`: this is the name of the VPN interface. On Linux, you can set it to anything. Or MacOS, it has to follow a more boring pattern. If you feel lazy, just use `auto` here.
 * `<local tun ip>`: local IP address of the tunnel. Use any private IP address that you don't use here. For some reason, I tend to pick `192.168.192.254` for the server, and `192.168.192.1` for the client.
 * `<remote tun ip>`: remote IP address of the tunnel. See above. These parameters must the same on the client and on the server, just reversed.
-* `<external host>`: on the client, it should be the IP address or the hostname of the server. On the server, it doesn't matter, so you can just use `auto`.
-* `<external port>`: the TCP port to listen to/connect to for the VPN. Use 443 or anything else.
+* `<vpn server ip>`: on the client, it should be the IP address or the hostname of the server. On the server, it doesn't matter, so you can just use `auto`.
+* `<vpn server port>`: the TCP port to listen to/connect to for the VPN. Use 443 or anything else.
 * `<external interface>`: the name of the external interface, that sends packets to the Internet. The first line of the `netstat -rn` output will tell you (`destination: default` or `destination: 0.0.0.0`). Required on a server. On a client, you can just use `"auto"`.
 * `<external gateway ip>`: the internal router IP address. Required on the client, can be left to `auto` on the server. Once again, the first line printed by `netstat -rn` will tell you (`gateway`).
 
