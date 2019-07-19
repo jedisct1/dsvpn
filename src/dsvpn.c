@@ -73,7 +73,8 @@ typedef struct Context_ {
     const char*   server_ip;
     const char*   server_port;
     const char*   ext_if_name;
-    const char*   ext_gw_ip;
+    const char*   wanted_ext_gw_ip;
+    char          ext_gw_ip[64];
     char          if_name[IFNAMSIZ];
     int           is_server;
     int           tun_fd;
@@ -400,8 +401,7 @@ get_default_gw_ip(void)
     static char gw[64];
 #ifdef __APPLE__
     return read_from_shell_command(
-        gw, sizeof gw,
-        "netstat -rn|awk '/^default/{if(index($6,\"en\")){print $2}}'");
+        gw, sizeof gw, "netstat -rn|awk '/^default/{print $2}'|head -n1");
 #elif defined(__linux__)
     return read_from_shell_command(
         gw, sizeof gw, "ip route show default|awk '/default/{print $3}'");
@@ -420,7 +420,7 @@ get_default_ext_if_name(void)
 #ifdef __APPLE__
     return read_from_shell_command(
         if_name, sizeof if_name,
-        "netstat -rn|awk '/^default/{if(index($6,\"en\")){print $6}}'");
+        "netstat -rn|awk '/^default/{print $6}'|head -n1");
 #elif defined(__linux__)
     return read_from_shell_command(
         if_name, sizeof if_name,
@@ -750,18 +750,17 @@ firewall_rules_cmds(const Context* context)
         return (Cmds){ set_cmds, unset_cmds };
     } else {
 #if defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
-        static const char *set_cmds[] =
-            { "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
-              "ifconfig $IF_NAME inet6 $LOCAL_TUN_IP6 $REMOTE_TUN_IP6 "
-              "prefixlen 128 up",
-              "route add $EXT_IP $EXT_GW_IP",
-              "route add 0/1 $REMOTE_TUN_IP",
-              "route add 128/1 $REMOTE_TUN_IP",
-              "route add -inet6 -blackhole 0000::/1 $REMOTE_TUN_IP6",
-              "route add -inet6 -blackhole 8000::/1 $REMOTE_TUN_IP6",
-              NULL },
-                          *unset_cmds[] = { "route delete $EXT_IP $EXT_GW_IP",
-                                            NULL };
+        static const char *set_cmds
+            []   = { "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
+                   "ifconfig $IF_NAME inet6 $LOCAL_TUN_IP6 $REMOTE_TUN_IP6 "
+                   "prefixlen 128 up",
+                   "route add $EXT_IP $EXT_GW_IP",
+                   "route add 0/1 $REMOTE_TUN_IP",
+                   "route add 128/1 $REMOTE_TUN_IP",
+                   "route add -inet6 -blackhole 0000::/1 $REMOTE_TUN_IP6",
+                   "route add -inet6 -blackhole 8000::/1 $REMOTE_TUN_IP6",
+                   NULL },
+   *unset_cmds[] = { "route delete $EXT_IP $EXT_GW_IP", NULL };
 #elif defined(__linux__)
         static const char *
             set_cmds[]   = { "sysctl net.ipv4.tcp_congestion_control=bbr",
@@ -1097,7 +1096,8 @@ get_tun6_addresses(Context* context)
 int
 main(int argc, char* argv[])
 {
-    Context context;
+    Context     context;
+    const char* ext_gw_ip;
 
     (void) safe_read_partial;
 
@@ -1127,10 +1127,13 @@ main(int argc, char* argv[])
         (argc <= 7 || strcmp(argv[7], "auto") == 0)
             ? (context.is_server ? DEFAULT_CLIENT_IP : DEFAULT_SERVER_IP)
             : argv[7];
-    if ((context.ext_gw_ip = (argc <= 8 || strcmp(argv[8], "auto") == 0)
-                                 ? get_default_gw_ip()
-                                 : argv[8]) == NULL &&
-        !context.is_server) {
+    context.wanted_ext_gw_ip =
+        (argc <= 8 || strcmp(argv[8], "auto") == 0) ? NULL : argv[8];
+    ext_gw_ip = context.wanted_ext_gw_ip ? context.wanted_ext_gw_ip
+                                         : get_default_gw_ip();
+    snprintf(context.ext_gw_ip, sizeof context.ext_gw_ip, "%s",
+             ext_gw_ip == NULL ? "" : ext_gw_ip);
+    if (ext_gw_ip == NULL && !context.is_server) {
         fprintf(stderr, "Unable to automatically determine the gateway IP\n");
         return 1;
     }
