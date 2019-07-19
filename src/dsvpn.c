@@ -1063,11 +1063,11 @@ usage(void)
         "Usage:\n"
         "\n"
         "dsvpn\t\"server\"\n\t<key file>\n\t<vpn server ip>|\"auto\"\n\t<vpn "
-        "server port>\n\t<tun interface>|\"auto\"\n\t<local tun "
+        "server port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun "
         "ip>|\"auto\"\n\t<remote tun ip>\"auto\"\n\t<external ip>|\"auto\""
         "\n\n"
         "dsvpn\t\"client\"\n\t<key file>\n\t<vpn server ip>\n\t<vpn server "
-        "port>\n\t<tun interface>|\"auto\"\n\t<local tun "
+        "port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun "
         "ip>|\"auto\"\n\t<remote tun ip>|\"auto\"\n\t<gateway ip>\"auto\"\n");
     exit(254);
 }
@@ -1101,7 +1101,8 @@ main(int argc, char* argv[])
         fprintf(stderr, "Unable to load the key file [%s]\n", argv[2]);
         return 1;
     }
-    context.server_ip = strcmp(argv[3], "auto") == 0 ? NULL : argv[3];
+    context.server_ip =
+        (argc <= 3 || strcmp(argv[3], "auto") == 0) ? NULL : argv[3];
     if (context.server_ip == NULL && !context.is_server) {
         usage();
     }

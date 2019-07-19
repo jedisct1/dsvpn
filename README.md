@@ -51,7 +51,7 @@ And copy it on the server and the client.
 dsvpn   "server"
         <key file>
         <vpn server ip>|"auto"
-        <vpn server port>
+        <vpn server port>|"auto"
         <tun interface>|"auto"
         <local tun ip>|"auto"
         <remote tun ip>"auto"
@@ -60,7 +60,7 @@ dsvpn   "server"
 dsvpn   "client"
         <key file>
         <vpn server ip>
-        <vpn server port>
+        <vpn server port>|"auto"
         <tun interface>|"auto"
         <local tun ip>|"auto"
         <remote tun ip>|"auto"
@@ -70,12 +70,12 @@ dsvpn   "client"
 * `server`|`client`: use `server` on the server, and `client` on clients.
 * `<key file>`: path to the file with the secret key (e.g. `vpn.key`).
 * `<vpn server ip>`: on the client, it should be the IP address or the hostname of the server. On the server, it doesn't matter, so you can just use `auto`.
-* `<vpn server port>`: the TCP port to listen to/connect to for the VPN. Use 443 or anything else.
+* `<vpn server port>`: the TCP port to listen to/connect to for the VPN. Use 443 or anything else. `auto` will use `443`.
 * `<tun interface>`: this is the name of the VPN interface. On Linux, you can set it to anything. Or MacOS, it has to follow a more boring pattern. If you feel lazy, just use `auto` here.
 * `<local tun ip>`: local IP address of the tunnel. Use any private IP address that you don't use here.
 * `<remote tun ip>`: remote IP address of the tunnel. See above. The local and remote tunnel IPs must the same on the client and on the server, just reversed. For some reason, I tend to pick `192.168.192.254` for the server, and `192.168.192.1` for the client. These values will be used if you put `auto` for the local and remote tunnel IPs.
-* `<external interface>`: the name of the external interface, that sends packets to the Internet. The first line of the `netstat -rn` output will tell you (`destination: default` or `destination: 0.0.0.0`). If you aren't using custom routing rules, can also just use `"auto"` here.
-* `<external gateway ip>`: the internal router IP address. Can be left to `auto` on the server. Once again, the first line printed by `netstat -rn` will tell you (`gateway`).
+* `<external ip>` (server only): the external IP address of the server. Can be left to `"auto"`.
+* `<gateway ip>` (client only): the internal router IP address. Once again, the first line printed by `netstat -rn` will tell you (`gateway`).
 
 If all the remaining parameters of a command would be `auto`, they don't have to be specified.
 
