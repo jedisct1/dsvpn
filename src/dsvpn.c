@@ -588,8 +588,8 @@ firewall_rules_cmds(const Context* context)
                            "ip route add $EXT_IP via $EXT_GW_IP",
                            "ip route add 0/1 via $REMOTE_TUN_IP",
                            "ip route add 128/1 via $REMOTE_TUN_IP",
-                           "ip -6 route add 0/1 via $REMOTE_TUN_IP6",
-                           "ip -6 route add 128/1 via $REMOTE_TUN_IP6",
+                           "ip -6 route add 0000::/1 via $REMOTE_TUN_IP6",
+                           "ip -6 route add 8000::/1 via $REMOTE_TUN_IP6",
                            NULL },
            *unset_cmds[] = { "ip route del $EXT_IP via $EXT_GW_IP", NULL };
 #else
