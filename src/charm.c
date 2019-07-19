@@ -30,16 +30,13 @@ static const uint32_t RK[12] = { 0x058, 0x038, 0x3c0, 0x0d0, 0x120, 0x014,
                                  0x060, 0x02c, 0x380, 0x0f0, 0x1a0, 0x012 };
 
 #ifdef __SSSE3__
-#define ROL32in128(x, b) \
-    _mm_or_si128(_mm_slli_epi32((x), (b)), _mm_srli_epi32((x), 32 - (b)))
+#define ROL32in128(x, b) _mm_or_si128(_mm_slli_epi32((x), (b)), _mm_srli_epi32((x), 32 - (b)))
 
-static void
-permute(uint32_t st[12])
+static void permute(uint32_t st[12])
 {
-    const __m128i rhoEast2 =
-        _mm_set_epi32(0x06050407, 0x02010003, 0x0e0d0c0f, 0x0a09080b);
-    __m128i a, b, c, p, e;
-    int     r;
+    const __m128i rhoEast2 = _mm_set_epi32(0x06050407, 0x02010003, 0x0e0d0c0f, 0x0a09080b);
+    __m128i       a, b, c, p, e;
+    int           r;
 
     a = _mm_loadu_si128((const __m128i *) (const void *) &st[0]);
     b = _mm_loadu_si128((const __m128i *) (const void *) &st[4]);
@@ -73,15 +70,13 @@ permute(uint32_t st[12])
         (s)[u] = (s)[v], (s)[v] = t; \
     } while (0)
 
-static void
-permute(uint32_t st[12])
+static void permute(uint32_t st[12])
 {
     uint32_t e[4], a, b, c, t, r, i;
 
     for (r = 0; r < ROUNDS; r++) {
         for (i = 0; i < 4; i++) {
-            e[i] = ROTR32(st[i] ^ st[i + 4] ^ st[i + 8], 18),
-            e[i] ^= ROTR32(e[i], 9);
+            e[i] = ROTR32(st[i] ^ st[i + 4] ^ st[i + 8], 18), e[i] ^= ROTR32(e[i], 9);
         }
         for (i = 0; i < 12; i++) {
             st[i] ^= e[(i - 1) & 3];
@@ -104,8 +99,7 @@ permute(uint32_t st[12])
 }
 #endif
 
-static inline void
-endian_swap_rate(uint32_t st[12])
+static inline void endian_swap_rate(uint32_t st[12])
 {
     (void) st;
 #ifdef NATIVE_BIG_ENDIAN
@@ -115,8 +109,7 @@ endian_swap_rate(uint32_t st[12])
 #endif
 }
 
-static inline void
-endian_swap_all(uint32_t st[12])
+static inline void endian_swap_all(uint32_t st[12])
 {
     (void) st;
 #ifdef NATIVE_BIG_ENDIAN
@@ -126,12 +119,10 @@ endian_swap_all(uint32_t st[12])
 #endif
 }
 
-static inline void
-xor128(void *out, const void *in)
+static inline void xor128(void *out, const void *in)
 {
 #ifdef __SSSE3__
-    _mm_storeu_si128(out,
-                     _mm_xor_si128(_mm_loadu_si128(out), _mm_loadu_si128(in)));
+    _mm_storeu_si128(out, _mm_xor_si128(_mm_loadu_si128(out), _mm_loadu_si128(in)));
 #else
     unsigned char *      out_ = (unsigned char *) out;
     const unsigned char *in_  = (const unsigned char *) in;
@@ -143,8 +134,7 @@ xor128(void *out, const void *in)
 #endif
 }
 
-static inline int
-equals(const unsigned char a[16], const unsigned char b[16], size_t len)
+static inline int equals(const unsigned char a[16], const unsigned char b[16], size_t len)
 {
     unsigned char d = 0;
     size_t        i;
@@ -155,8 +145,7 @@ equals(const unsigned char a[16], const unsigned char b[16], size_t len)
     return 1 & ((d - 1) >> 8);
 }
 
-static inline void
-squeeze_permute(uint32_t st[12], unsigned char dst[16])
+static inline void squeeze_permute(uint32_t st[12], unsigned char dst[16])
 {
     endian_swap_rate(st);
     memcpy(dst, st, 16);
@@ -164,9 +153,7 @@ squeeze_permute(uint32_t st[12], unsigned char dst[16])
     permute(st);
 }
 
-void
-uc_state_init(uint32_t st[12], const unsigned char key[32],
-              const unsigned char iv[16])
+void uc_state_init(uint32_t st[12], const unsigned char key[32], const unsigned char iv[16])
 {
     memcpy(&st[0], iv, 16);
     memcpy(&st[4], key, 32);
@@ -174,9 +161,7 @@ uc_state_init(uint32_t st[12], const unsigned char key[32],
     permute(st);
 }
 
-void
-uc_encrypt(uint32_t st[12], unsigned char *msg, size_t msg_len,
-           unsigned char tag[16])
+void uc_encrypt(uint32_t st[12], unsigned char *msg, size_t msg_len, unsigned char tag[16])
 {
     unsigned char squeezed[16];
     unsigned char padded[16 + 1];
@@ -208,9 +193,8 @@ uc_encrypt(uint32_t st[12], unsigned char *msg, size_t msg_len,
     squeeze_permute(st, tag);
 }
 
-int
-uc_decrypt(uint32_t st[12], unsigned char *msg, size_t msg_len,
-           const unsigned char *expected_tag, size_t expected_tag_len)
+int uc_decrypt(uint32_t st[12], unsigned char *msg, size_t msg_len,
+               const unsigned char *expected_tag, size_t expected_tag_len)
 {
     unsigned char tag[16];
     unsigned char squeezed[16];
@@ -249,9 +233,7 @@ uc_decrypt(uint32_t st[12], unsigned char *msg, size_t msg_len,
     return 0;
 }
 
-void
-uc_hash(uint32_t st[12], unsigned char h[32], const unsigned char *msg,
-        size_t len)
+void uc_hash(uint32_t st[12], unsigned char h[32], const unsigned char *msg, size_t len)
 {
     unsigned char padded[16 + 1];
     size_t        off = 0;
@@ -278,20 +260,17 @@ uc_hash(uint32_t st[12], unsigned char h[32], const unsigned char *msg,
     squeeze_permute(st, &h[16]);
 }
 
-void
-uc_memzero(void *buf, size_t len)
+void uc_memzero(void *buf, size_t len)
 {
-    volatile unsigned char *volatile buf_ =
-        (volatile unsigned char *volatile) buf;
-    size_t i = (size_t) 0U;
+    volatile unsigned char *volatile buf_ = (volatile unsigned char *volatile) buf;
+    size_t i                              = (size_t) 0U;
 
     while (i < len) {
         buf_[i++] = 0U;
     }
 }
 
-void
-uc_randombytes_buf(void *buf, size_t len)
+void uc_randombytes_buf(void *buf, size_t len)
 {
 #ifdef __linux__
     if ((size_t) syscall(SYS_getrandom, buf, (int) len, 0) != len) {
