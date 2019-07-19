@@ -85,7 +85,7 @@ If all the remaining parameters of a command would be `auto`, they don't have to
 sudo ./dsvpn server vpn.key auto 1959
 ```
 
-Here, I use port `1959`. Everything else is set to the default values.
+Here, I use port `1959`. Everything else is set to the default values. If you want to use the default port (`443`), it doesn't even have to be specified.
 
 ## Example usage on the client
 
