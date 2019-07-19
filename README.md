@@ -51,7 +51,7 @@ And copy it on the server and the client.
 sudo ./dsvpn server vpn.key auto 1959
 ```
 
-Here, I use port `1959`. Everything else is set to the default values. If you want to use the default port (`443`), it doesn't even have to be specified.
+Here, I use port `1959`. Everything else is set to the default values. If you want to use the default port (`443`), it doesn't even have to be specified, so the command can just be `./dsvpn server vpn.key`.
 
 ## Example usage on the client
 
@@ -59,7 +59,7 @@ Here, I use port `1959`. Everything else is set to the default values. If you wa
 sudo ./dsvpn client vpn.key 34.216.127.34 1959
 ```
 
-This is a MacOS client, connecting to the VPN server `34.216.127.34` on port `1959`.
+This is a MacOS client, connecting to the VPN server `34.216.127.34` on port `1959`. The port number is optional as well.
 
 On MacOS, the VPN server can be specified as a host name. Linux currently requires an IP address.
 
