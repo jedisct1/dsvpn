@@ -19,7 +19,6 @@ Features:
 Next:
 
 * Optimized ARM (NEON) implementation
-* Clean shutdown
 
 Maybe:
 
@@ -99,6 +98,8 @@ OpenVPN is horribly difficult to set up.
 Sshuttle is very nice and I've been using it a lot in the past, but it's not a VPN. It doesn't tunnel non-TCP traffic. It also requires a full Python install, which I'd rather avoid on my router.
 
 Everything else I looked at was either too difficult to use, slow, bloated, didn't work on MacOS, didn't work on small devices, was complicated to cross-compile due to dependencies, wasn't maintained, or didn't feel secure.
+
+TCP-over-TCP is not as bad as some documents describe. It works surprisingly well in practice, especially with modern congestion control algorithms (bbr). For traditional algorithms that rely on packet loss, DSVPN has the ability to emulate congestion in the wrapped layer, by setting the `BUFFERBLOAT_CONTROL` macro to `1`.
 
 ## Cryptography
 
