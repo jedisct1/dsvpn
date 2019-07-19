@@ -437,10 +437,6 @@ tcp_opts(int fd)
 {
     int on = 1;
 
-    char result[2];
-    read_from_shell_command(
-        result, sizeof result,
-        "netstat -rn | awk '/default/{if(index($6,\"en\")){print $2}}'");
     (void) setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char*) &on, sizeof on);
 #ifdef TCP_QUICKACK
     (void) setsockopt(fd, IPPROTO_TCP, TCP_QUICKACK, (char*) &on, sizeof on);
