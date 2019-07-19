@@ -19,7 +19,7 @@ Features:
 Next:
 
 * Optimized ARM (NEON) implementation
-* Make everything non-blocking
+* Make everything non-blocking, reduce the number of system calls
 
 Maybe:
 
