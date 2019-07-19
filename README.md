@@ -50,50 +50,50 @@ And copy it on the server and the client.
 ```text
 dsvpn   "server"
         <key file>
-        <tun interface>|"auto"
-        <local tun ip>
-        <remote tun ip>
         <vpn server ip>|"auto"
         <vpn server port>
-        <external interface>
-        <external gateway ip>|"auto"
+        <tun interface>|"auto"
+        <local tun ip>|"auto"
+        <remote tun ip>"auto"
+        <external ip>|"auto"
 
 dsvpn   "client"
         <key file>
-        <tun interface>|"auto"
-        <local tun ip>
-        <remote tun ip>
         <vpn server ip>
         <vpn server port>
-        <external interface>|"auto"
-        <external gateway ip>
+        <tun interface>|"auto"
+        <local tun ip>|"auto"
+        <remote tun ip>|"auto"
+        <gateway ip>"auto"
 ```
 
 * `server`|`client`: use `server` on the server, and `client` on clients.
 * `<key file>`: path to the file with the secret key (e.g. `vpn.key`).
-* `<tun interface>`: this is the name of the VPN interface. On Linux, you can set it to anything. Or MacOS, it has to follow a more boring pattern. If you feel lazy, just use `auto` here.
-* `<local tun ip>`: local IP address of the tunnel. Use any private IP address that you don't use here. For some reason, I tend to pick `192.168.192.254` for the server, and `192.168.192.1` for the client.
-* `<remote tun ip>`: remote IP address of the tunnel. See above. These parameters must the same on the client and on the server, just reversed.
 * `<vpn server ip>`: on the client, it should be the IP address or the hostname of the server. On the server, it doesn't matter, so you can just use `auto`.
 * `<vpn server port>`: the TCP port to listen to/connect to for the VPN. Use 443 or anything else.
-* `<external interface>`: the name of the external interface, that sends packets to the Internet. The first line of the `netstat -rn` output will tell you (`destination: default` or `destination: 0.0.0.0`). Required on a server. On a client, you can just use `"auto"`.
-* `<external gateway ip>`: the internal router IP address. Required on the client, can be left to `auto` on the server. Once again, the first line printed by `netstat -rn` will tell you (`gateway`).
+* `<tun interface>`: this is the name of the VPN interface. On Linux, you can set it to anything. Or MacOS, it has to follow a more boring pattern. If you feel lazy, just use `auto` here.
+* `<local tun ip>`: local IP address of the tunnel. Use any private IP address that you don't use here.
+* `<remote tun ip>`: remote IP address of the tunnel. See above. The local and remote tunnel IPs must the same on the client and on the server, just reversed. For some reason, I tend to pick `192.168.192.254` for the server, and `192.168.192.1` for the client. These values will be used if you put `auto` for the local and remote tunnel IPs.
+* `<external interface>`: the name of the external interface, that sends packets to the Internet. The first line of the `netstat -rn` output will tell you (`destination: default` or `destination: 0.0.0.0`). If you aren't using custom routing rules, can also just use `"auto"` here.
+* `<external gateway ip>`: the internal router IP address. Can be left to `auto` on the server. Once again, the first line printed by `netstat -rn` will tell you (`gateway`).
+
+If all the remaining parameters of a command would be `auto`, they don't have to be specified.
 
 ## Example usage on the server
 
 ```sh
-sudo ./dsvpn server vpn.key auto 192.168.192.254 192.168.192.1 auto 1959 eno1 auto
+sudo ./dsvpn server vpn.key auto 1959
 ```
 
-Here, I use port `1959`. This is a Linux box and the network interface is `eno1`.
+Here, I use port `1959`. Everything else is set to the default values.
 
 ## Example usage on the client
 
 ```sh
-sudo ./dsvpn client vpn.key auto 192.168.192.1 192.168.192.254 34.216.127.34 1959 auto 192.168.1.1
+sudo ./dsvpn client vpn.key 34.216.127.34 1959
 ```
 
-This is a MacOS client, connecting to the VPN server `34.216.127.34` on port `1959`. Its WiFi interface name is `en0` and the local router address is `192.168.1.1`.
+This is a MacOS client, connecting to the VPN server `34.216.127.34` on port `1959`.
 
 On MacOS, the VPN server can be specified as a host name. Linux currently requires an IP address.
 

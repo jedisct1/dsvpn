@@ -46,6 +46,9 @@
 #define TIMEOUT (120 * 1000)
 #define OUTER_CONGESTION_CONTROL_ALG "bbr"
 #define BUFFERBLOAT_CONTROL 0
+#define DEFAULT_CLIENT_IP "192.168.192.1"
+#define DEFAULT_SERVER_IP "192.168.192.254"
+#define DEFAULT_PORT "443"
 
 #ifdef NATIVE_BIG_ENDIAN
 #define endian_swap16(x) __builtin_bswap16(x)
@@ -368,11 +371,76 @@ tun_write(int fd, const void* data, size_t size)
 }
 #endif
 
+static char*
+read_from_shell_command(char* result, size_t sizeof_result, const char* command)
+{
+    FILE* fp;
+    char* pnt;
+
+    if ((fp = popen(command, "r")) == NULL) {
+        return NULL;
+    }
+    if (fgets(result, sizeof_result, fp) == NULL) {
+        fclose(fp);
+        fprintf(stderr, "Command [%s] failed]\n", command);
+        return NULL;
+    }
+    if ((pnt = strrchr(result, '\n')) != NULL) {
+        *pnt = 0;
+    }
+    pclose(fp);
+
+    return *result == 0 ? NULL : result;
+}
+
+static char*
+get_default_gw_ip(void)
+{
+    static char gw[64];
+#ifdef __APPLE__
+    return read_from_shell_command(
+        gw, sizeof gw,
+        "netstat -rn|awk '/^default/{if(index($6,\"en\")){print $2}}'");
+#elif defined(__linux__)
+    return read_from_shell_command(
+        gw, sizeof gw, "ip route show default|awk '/default/{print $3}'");
+#elif defined(__OpenBSD__) || defined(__FreeBSD__)
+    return read_from_shell_command(gw, sizeof gw,
+                                   "netstat -rn|awk '/^default/{print $2}'");
+#else
+    return NULL;
+#endif
+}
+
+static char*
+get_default_ext_if_name(void)
+{
+    static char if_name[64];
+#ifdef __APPLE__
+    return read_from_shell_command(
+        if_name, sizeof if_name,
+        "netstat -rn|awk '/^default/{if(index($6,\"en\")){print $6}}'");
+#elif defined(__linux__)
+    return read_from_shell_command(
+        if_name, sizeof if_name,
+        "ip route show default|awk '/default/{print $5}'");
+#elif defined(__OpenBSD__) || defined(__FreeBSD__)
+    return read_from_shell_command(if_name, sizeof if_name,
+                                   "netstat -rn|awk '/^default/{print $8}'");
+#else
+    return NULL;
+#endif
+}
+
 static int
 tcp_opts(int fd)
 {
     int on = 1;
 
+    char result[2];
+    read_from_shell_command(
+        result, sizeof result,
+        "netstat -rn | awk '/default/{if(index($6,\"en\")){print $2}}'");
     (void) setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char*) &on, sizeof on);
 #ifdef TCP_QUICKACK
     (void) setsockopt(fd, IPPROTO_TCP, TCP_QUICKACK, (char*) &on, sizeof on);
@@ -405,6 +473,7 @@ tcp_client(const char* address, const char* port)
         hints.ai_family = AF_INET;
     }
 #endif
+    printf("Connecting to %s:%s...\n", address, port);
     if ((eai = getaddrinfo(address, port, &hints, &res)) != 0 ||
         (res->ai_family != AF_INET && res->ai_family != AF_INET6)) {
         fprintf(stderr, "Unable to create the client socket: [%s]\n",
@@ -676,17 +745,18 @@ firewall_rules_cmds(const Context* context)
         return (Cmds){ set_cmds, unset_cmds };
     } else {
 #if defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
-        static const char *set_cmds
-            []   = { "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
-                   "ifconfig $IF_NAME inet6 $LOCAL_TUN_IP6 $REMOTE_TUN_IP6 "
-                   "prefixlen 128 up",
-                   "route add $EXT_IP $EXT_GW_IP",
-                   "route add 0/1 $REMOTE_TUN_IP",
-                   "route add 128/1 $REMOTE_TUN_IP",
-                   "route add -inet6 -blackhole 0000::/1 $REMOTE_TUN_IP6",
-                   "route add -inet6 -blackhole 8000::/1 $REMOTE_TUN_IP6",
-                   NULL },
-   *unset_cmds[] = { "route delete $EXT_IP $EXT_GW_IP", NULL };
+        static const char *set_cmds[] =
+            { "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
+              "ifconfig $IF_NAME inet6 $LOCAL_TUN_IP6 $REMOTE_TUN_IP6 "
+              "prefixlen 128 up",
+              "route add $EXT_IP $EXT_GW_IP",
+              "route add 0/1 $REMOTE_TUN_IP",
+              "route add 128/1 $REMOTE_TUN_IP",
+              "route add -inet6 -blackhole 0000::/1 $REMOTE_TUN_IP6",
+              "route add -inet6 -blackhole 8000::/1 $REMOTE_TUN_IP6",
+              NULL },
+                          *unset_cmds[] = { "route delete $EXT_IP $EXT_GW_IP",
+                                            NULL };
 #elif defined(__linux__)
         static const char *
             set_cmds[]   = { "sysctl net.ipv4.tcp_congestion_control=bbr",
@@ -790,7 +860,7 @@ client_connect(Context* context)
     context->uc_st[context->is_server][0] ^= 1;
     context->client_fd = tcp_client(context->server_ip, context->server_port);
     if (context->client_fd == -1) {
-        perror("tcp_client");
+        perror("TCP client");
         return -1;
     }
 #if BUFFERBLOAT_CONTROL
@@ -996,13 +1066,13 @@ usage(void)
     puts(
         "Usage:\n"
         "\n"
-        "dsvpn\t\"server\"\n\t<key file>\n\t<tun interface>|\"auto\"\n\t"
-        "<local tun ip>\n\t<remote tun ip>\n\t<vpn server ip>|\"auto\"\n\t<vpn "
-        "server port>\n\t<external interface>\n\t<external gateway ip>|\"auto\""
+        "dsvpn\t\"server\"\n\t<key file>\n\t<vpn server ip>|\"auto\"\n\t<vpn "
+        "server port>\n\t<tun interface>|\"auto\"\n\t<local tun "
+        "ip>|\"auto\"\n\t<remote tun ip>\"auto\"\n\t<external ip>|\"auto\""
         "\n\n"
-        "dsvpn\t\"client\"\n\t<key file>\n\t<tun interface>|\"auto\"\n\t"
-        "<local tun ip>\n\t<remote tun ip>\n\t<vpn server ip>\n\t<vpn server "
-        "port>\n\t<external interface>|\"auto\"\n\t<external gateway ip>\n");
+        "dsvpn\t\"client\"\n\t<key file>\n\t<vpn server ip>\n\t<vpn server "
+        "port>\n\t<tun interface>|\"auto\"\n\t<local tun "
+        "ip>|\"auto\"\n\t<remote tun ip>|\"auto\"\n\t<gateway ip>\"auto\"\n");
     return;
 }
 
@@ -1026,25 +1096,35 @@ main(int argc, char* argv[])
 
     (void) safe_read_partial;
 
-    if (argc != 10) {
+    if (argc < 3) {
         usage();
         return 0;
     }
     memset(&context, 0, sizeof context);
     context.is_server = strcmp(argv[1], "server") == 0;
     if (load_key_file(&context, argv[2]) != 0) {
-        fprintf(stderr, "Unable to load the key file [%s]\n", argv[3]);
+        fprintf(stderr, "Unable to load the key file [%s]\n", argv[2]);
         return 1;
     }
-    context.wanted_name   = strcmp(argv[3], "auto") == 0 ? NULL : argv[3];
-    context.local_tun_ip  = argv[4];
-    context.remote_tun_ip = argv[5];
-    context.server_ip     = strcmp(argv[6], "auto") == 0 ? NULL : argv[6];
-    context.server_port   = argv[7];
-    context.ext_if_name   = argv[8];
-    context.ext_gw_ip     = argv[9];
+    context.server_ip =
+        strcmp(argv[3], "auto") == 0 ? "<unspecified ip>" : argv[3];
+    context.server_port =
+        (argc <= 4 || strcmp(argv[4], "auto") == 0) ? DEFAULT_PORT : argv[4];
+    context.wanted_name =
+        (argc <= 5 || strcmp(argv[5], "auto") == 0) ? NULL : argv[5];
+    context.local_tun_ip =
+        (argc <= 6 || strcmp(argv[6], "auto") == 0)
+            ? (context.is_server ? DEFAULT_SERVER_IP : DEFAULT_CLIENT_IP)
+            : argv[6];
+    context.remote_tun_ip =
+        (argc <= 7 || strcmp(argv[7], "auto") == 0)
+            ? (context.is_server ? DEFAULT_CLIENT_IP : DEFAULT_SERVER_IP)
+            : argv[7];
+    context.ext_gw_ip = (argc <= 8 || strcmp(argv[8], "auto") == 0)
+                            ? get_default_gw_ip()
+                            : argv[8];
+    context.ext_if_name = get_default_ext_if_name();
     get_tun6_addresses(&context);
-
     context.tun_fd = tun_create(context.if_name, context.wanted_name);
     if (context.tun_fd == -1) {
         perror("tun_create");
