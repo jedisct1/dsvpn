@@ -97,7 +97,7 @@ dsvpn   "client"
 * `<local tun ip>`: local IP address of the tunnel. Use any private IP address that you don't use here.
 * `<remote tun ip>`: remote IP address of the tunnel. See above. The local and remote tunnel IPs must the same on the client and on the server, just reversed. For some reason, I tend to pick `192.168.192.254` for the server, and `192.168.192.1` for the client. These values will be used if you put `auto` for the local and remote tunnel IPs.
 * `<external ip>` (server only): the external IP address of the server. Can be left to `"auto"`.
-* `<gateway ip>` (client only): the internal router IP address. Once again, the first line printed by `netstat -rn` will tell you (`gateway`).
+* `<gateway ip>` (client only): the internal router IP address. The first line printed by `netstat -rn` will tell you (`gateway`).
 
 If all the remaining parameters of a command would be `auto`, they don't have to be specified.
 
