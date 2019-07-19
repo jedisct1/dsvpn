@@ -1119,10 +1119,19 @@ main(int argc, char* argv[])
         (argc <= 7 || strcmp(argv[7], "auto") == 0)
             ? (context.is_server ? DEFAULT_CLIENT_IP : DEFAULT_SERVER_IP)
             : argv[7];
-    context.ext_gw_ip = (argc <= 8 || strcmp(argv[8], "auto") == 0)
-                            ? get_default_gw_ip()
-                            : argv[8];
-    context.ext_if_name = get_default_ext_if_name();
+    if ((context.ext_gw_ip = (argc <= 8 || strcmp(argv[8], "auto") == 0)
+                                 ? get_default_gw_ip()
+                                 : argv[8]) == NULL &&
+        !context.is_server) {
+        fprintf(stderr, "Unable to automatically determine the gateway IP\n");
+        return 1;
+    }
+    if ((context.ext_if_name = get_default_ext_if_name()) == NULL &&
+        context.is_server) {
+        fprintf(stderr,
+                "Unable to automatically determine the external interface\n");
+        return 1;
+    }
     get_tun6_addresses(&context);
     context.tun_fd = tun_create(context.if_name, context.wanted_name);
     if (context.tun_fd == -1) {
