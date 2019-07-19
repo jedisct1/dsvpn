@@ -121,10 +121,10 @@ static ssize_t
 safe_read(const int fd, void* const buf_, size_t count, const int timeout)
 {
     struct pollfd  pfd;
-    unsigned char* buf = (unsigned char*) buf_;
-    ssize_t        readnb;
+    unsigned char* buf    = (unsigned char*) buf_;
+    ssize_t        readnb = -1;
 
-    while (count > (ssize_t) 0) {
+    while (readnb != 0 && count > (ssize_t) 0) {
         while ((readnb = read(fd, buf, count)) < (ssize_t) 0) {
             if (errno == EAGAIN) {
                 pfd.fd     = fd;
