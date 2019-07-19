@@ -66,8 +66,8 @@ typedef struct Context_ {
     const char*   remote_tun_ip;
     const char*   local_tun_ip6;
     const char*   remote_tun_ip6;
-    const char*   ext_ip;
-    const char*   ext_port;
+    const char*   server_ip;
+    const char*   server_port;
     const char*   ext_if_name;
     const char*   ext_gw_ip;
     char          if_name[IFNAMSIZ];
@@ -716,8 +716,8 @@ firewall_rules(Context* context, int set)
                                 { "$REMOTE_TUN_IP6", context->remote_tun_ip6 },
                                 { "$LOCAL_TUN_IP", context->local_tun_ip },
                                 { "$REMOTE_TUN_IP", context->remote_tun_ip },
-                                { "$EXT_IP", context->ext_ip },
-                                { "$EXT_PORT", context->ext_port },
+                                { "$EXT_IP", context->server_ip },
+                                { "$EXT_PORT", context->server_port },
                                 { "$EXT_IF_NAME", context->ext_if_name },
                                 { "$EXT_GW_IP", context->ext_gw_ip },
                                 { "$IF_NAME", context->if_name },
@@ -788,7 +788,7 @@ client_connect(Context* context)
 {
     memset(context->uc_st, 0, sizeof context->uc_st);
     context->uc_st[context->is_server][0] ^= 1;
-    context->client_fd = tcp_client(context->ext_ip, context->ext_port);
+    context->client_fd = tcp_client(context->server_ip, context->server_port);
     if (context->client_fd == -1) {
         perror("tcp_client");
         return -1;
@@ -951,9 +951,8 @@ doit(Context* context)
                                                 .events  = POLLIN,
                                                 .revents = 0 };
     if (context->is_server) {
-        if ((context->listen_fd = tcp_listener(
-                 strcmp(context->ext_ip, "auto") == 0 ? NULL : context->ext_ip,
-                 context->ext_port)) == -1) {
+        if ((context->listen_fd = tcp_listener(context->server_ip,
+                                               context->server_port)) == -1) {
             perror("tcp_listener");
             return -1;
         }
@@ -1040,8 +1039,8 @@ main(int argc, char* argv[])
     context.wanted_name   = strcmp(argv[3], "auto") == 0 ? NULL : argv[3];
     context.local_tun_ip  = argv[4];
     context.remote_tun_ip = argv[5];
-    context.ext_ip        = argv[6];
-    context.ext_port      = argv[7];
+    context.server_ip     = strcmp(argv[6], "auto") == 0 ? NULL : argv[6];
+    context.server_port   = argv[7];
     context.ext_if_name   = argv[8];
     context.ext_gw_ip     = argv[9];
     get_tun6_addresses(&context);
