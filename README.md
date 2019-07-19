@@ -51,7 +51,7 @@ And copy it on the server and the client.
 sudo ./dsvpn server vpn.key auto 1959
 ```
 
-Here, I use port `1959`. Everything else is set to the default values. If you want to use the default port (`443`), it doesn't even have to be specified, so the command can just be `./dsvpn server vpn.key`.
+Here, I use port `1959`. Everything else is set to the default values. If you want to use the default port (`443`), it doesn't even have to be specified, so the parameters can just be `server vpn.key`
 
 ## Example usage on the client
 
