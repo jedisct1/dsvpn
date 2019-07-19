@@ -46,6 +46,7 @@
 #define TIMEOUT (120 * 1000)
 #define OUTER_CONGESTION_CONTROL_ALG "bbr"
 #define BUFFERBLOAT_CONTROL 0
+#define NOTSENT_LOWAT (128 * 1024)
 #define DEFAULT_CLIENT_IP "192.168.192.1"
 #define DEFAULT_SERVER_IP "192.168.192.254"
 #define DEFAULT_PORT "443"
@@ -447,6 +448,13 @@ tcp_opts(int fd)
     (void) setsockopt(fd, IPPROTO_TCP, TCP_CONGESTION,
                       OUTER_CONGESTION_CONTROL_ALG,
                       sizeof OUTER_CONGESTION_CONTROL_ALG - 1);
+#endif
+#if BUFFERBLOAT_CONTROL && defined(TCP_NOTSENT_LOWAT)
+    {
+        unsigned int notsent_lowat = NOTSENT_LOWAT;
+        (void) setsockopt(fd, IPPROTO_TCP, TCP_NOTSENT_LOWAT,
+                          (char*) &notsent_lowat, sizeof notsent_lowat);
+    }
 #endif
     return 0;
 }
