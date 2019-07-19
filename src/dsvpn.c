@@ -666,9 +666,9 @@ shell_cmd(const char* substs[][2], const char* args_str)
         }
         is_space = 0;
         for (i = 0; substs[i][0] != NULL; i++) {
-            size_t pat_len = strlen(substs[i][0]),
-                   sub_len = strlen(substs[i][1]);
+            size_t pat_len = strlen(substs[i][0]), sub_len;
             if (!strncmp(substs[i][0], &args_str[args_str_i], pat_len)) {
+                sub_len = strlen(substs[i][1]);
                 if (sizeof cmdbuf - cmdbuf_i <= sub_len) {
                     return -1;
                 }
