@@ -536,6 +536,7 @@ tcp_listener(const char* address, const char* port)
     (void) setsockopt(listen_fd, IPPROTO_IPV6, IPV6_V6ONLY, (char*) &on,
                       sizeof on);
 #endif
+    printf("Listening to %s:%s\n", address == NULL ? "*" : address, port);
     if (bind(listen_fd, (struct sockaddr*) res->ai_addr,
              (socklen_t) res->ai_addrlen) != 0 ||
         listen(listen_fd, backlog) != 0) {
