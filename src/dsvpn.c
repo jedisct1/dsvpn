@@ -1103,10 +1103,7 @@ main(int argc, char* argv[])
         return 1;
     }
     context.server_ip =
-        (argc <= 3 || strcmp(argv[3], "auto") == 0) ? NULL : argv[3];
-    if (context.server_ip == NULL && !context.is_server) {
-        usage();
-    }
+        (argc <= 3 || strcmp(argv[3], "auto") == 0) ? "0.0.0.0" : argv[3];
     context.server_port =
         (argc <= 4 || strcmp(argv[4], "auto") == 0) ? DEFAULT_PORT : argv[4];
     context.wanted_name =
