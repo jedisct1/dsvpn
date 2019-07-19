@@ -33,7 +33,7 @@ Non-features:
 
 Never ever:
 
-* Anything including the `systemd` characters sequence.
+* Any feature request mentioning `systemd`.
 
 ## Installation
 
