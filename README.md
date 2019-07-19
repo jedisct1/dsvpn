@@ -55,7 +55,7 @@ dsvpn   "server"
         <remote tun ip>
         <external host>|"auto"
         <external port>
-        <external interface>|"auto"
+        <external interface>
         <external gateway ip>|"auto"
 
 dsvpn   "client"
@@ -65,7 +65,7 @@ dsvpn   "client"
         <remote tun ip>
         <external host>
         <external port>
-        <external interface>
+        <external interface>|"auto"
         <external gateway ip>
 ```
 
@@ -76,7 +76,7 @@ dsvpn   "client"
 * `<remote tun ip>`: remote IP address of the tunnel. See above. These parameters must the same on the client and on the server, just reversed.
 * `<external host>`: on the client, it should be the IP address or the hostname of the server. On the server, it doesn't matter, so you can just use `auto`.
 * `<external port>`: the TCP port to listen to/connect to for the VPN. Use 443 or anything else.
-* `<external interface>`: the name of the external interface, that sends packets to the Internet. The first line of the `netstat -rn` output will tell you (`destination: default` or `destination: 0.0.0.0`).
+* `<external interface>`: the name of the external interface, that sends packets to the Internet. The first line of the `netstat -rn` output will tell you (`destination: default` or `destination: 0.0.0.0`). Required on a server. On a client, you can just use `"auto"`.
 * `<external gateway ip>`: the internal router IP address. Required on the client, can be left to `auto` on the server. Once again, the first line printed by `netstat -rn` will tell you (`gateway`).
 
 ## Example usage on the server
@@ -90,7 +90,7 @@ Here, I use port `1959`. This is a Linux box and the network interface is `eno1`
 ## Example usage on the client
 
 ```sh
-sudo ./dsvpn client vpn.key auto 192.168.192.1 192.168.192.254 34.216.127.34 1959 en0 192.168.1.1
+sudo ./dsvpn client vpn.key auto 192.168.192.1 192.168.192.254 34.216.127.34 1959 auto 192.168.1.1
 ```
 
 This is a MacOS client, connecting to the VPN server `34.216.127.34` on port `1959`. Its WiFi interface name is `en0` and the local router address is `192.168.1.1`.

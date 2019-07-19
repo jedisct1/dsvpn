@@ -999,14 +999,13 @@ usage(void)
         "\n"
         "dsvpn\t\"server\"\n\t<key file>\n\t<tun interface>|\"auto\"\n\t"
         "<local tun ip>\n\t<remote tun ip>\n\t<external "
-        "host>|\"auto\"\n\t<external "
-        "port>\n\t<external interface>|\"auto\"\n\t<external gateway "
-        "ip>|\"auto\""
+        "host>|\"auto\"\n\t<external port>\n\t<external "
+        "interface>\n\t<external gateway ip>|\"auto\""
         "\n\n"
         "dsvpn\t\"client\"\n\t<key file>\n\t<tun interface>|\"auto\"\n\t"
         "<local tun ip>\n\t<remote tun ip>\n\t<external host>\n\t<external "
         "port>\n\t"
-        "<external interface>\n\t<external gateway ip>\n");
+        "<external interface>|\"auto\"\n\t<external gateway ip>\n");
     return;
 }
 
