@@ -63,6 +63,10 @@ This is a MacOS client, connecting to the VPN server `34.216.127.34` on port `19
 
 On MacOS, the VPN server can be specified as a host name. Linux currently requires an IP address.
 
+## That's it
+
+You are connected.
+
 ## Advanced configuration
 
 ```text
@@ -96,10 +100,6 @@ dsvpn   "client"
 * `<gateway ip>` (client only): the internal router IP address. Once again, the first line printed by `netstat -rn` will tell you (`gateway`).
 
 If all the remaining parameters of a command would be `auto`, they don't have to be specified.
-
-## That's it
-
-You are connected.
 
 ## Why
 
