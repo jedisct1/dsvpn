@@ -401,10 +401,12 @@ get_default_gw_ip(void)
     static char gw[64];
 #ifdef __APPLE__
     return read_from_shell_command(
-        gw, sizeof gw, "route get default|awk '/gateway/{print $2}'|head -n1");
+        gw, sizeof gw,
+        "route -n get default 2>/dev/null|awk '/gateway/{print $2}'|head -n1");
 #elif defined(__linux__)
     return read_from_shell_command(
-        gw, sizeof gw, "ip route show default|awk '/default/{print $3}'");
+        gw, sizeof gw,
+        "ip route show default 2>/dev/null|awk '/default/{print $3}'");
 #elif defined(__OpenBSD__) || defined(__FreeBSD__)
     return read_from_shell_command(gw, sizeof gw,
                                    "netstat -rn|awk '/^default/{print $2}'");
@@ -418,13 +420,13 @@ get_default_ext_if_name(void)
 {
     static char if_name[64];
 #ifdef __APPLE__
-    return read_from_shell_command(
-        if_name, sizeof if_name,
-        "route get default|awk '/interface/{print $2}'|head -n1");
+    return read_from_shell_command(if_name, sizeof if_name,
+                                   "route -n get default 2>/dev/null|awk "
+                                   "'/interface/{print $2}'|head -n1");
 #elif defined(__linux__)
     return read_from_shell_command(
         if_name, sizeof if_name,
-        "ip route show default|awk '/default/{print $5}'");
+        "ip route show default 2>/dev/null|awk '/default/{print $5}'");
 #elif defined(__OpenBSD__) || defined(__FreeBSD__)
     return read_from_shell_command(if_name, sizeof if_name,
                                    "netstat -rn|awk '/^default/{print $8}'");
@@ -456,6 +458,181 @@ tcp_opts(int fd)
                           (char*) &notsent_lowat, sizeof notsent_lowat);
     }
 #endif
+    return 0;
+}
+
+static int
+shell_cmd(const char* substs[][2], const char* args_str)
+{
+    char*  args[64];
+    char   cmdbuf[4096];
+    pid_t  child;
+    size_t args_i = 0, cmdbuf_i = 0, args_str_i, i;
+    int    c, exit_status, is_space = 1;
+
+    errno = ENOSPC;
+    for (args_str_i = 0; (c = args_str[args_str_i]) != 0; args_str_i++) {
+        if (isspace((unsigned char) c)) {
+            if (!is_space) {
+                if (cmdbuf_i >= sizeof cmdbuf) {
+                    return -1;
+                }
+                cmdbuf[cmdbuf_i++] = 0;
+            }
+            is_space = 1;
+            continue;
+        }
+        if (is_space) {
+            if (args_i >= sizeof args / sizeof args[0]) {
+                return -1;
+            }
+            args[args_i++] = &cmdbuf[cmdbuf_i];
+        }
+        is_space = 0;
+        for (i = 0; substs[i][0] != NULL; i++) {
+            size_t pat_len = strlen(substs[i][0]), sub_len;
+            if (!strncmp(substs[i][0], &args_str[args_str_i], pat_len)) {
+                sub_len = strlen(substs[i][1]);
+                if (sizeof cmdbuf - cmdbuf_i <= sub_len) {
+                    return -1;
+                }
+                memcpy(&cmdbuf[cmdbuf_i], substs[i][1], sub_len);
+                args_str_i += pat_len - 1;
+                cmdbuf_i += sub_len;
+                break;
+            }
+        }
+        if (substs[i][0] == NULL) {
+            if (cmdbuf_i >= sizeof cmdbuf) {
+                return -1;
+            }
+            cmdbuf[cmdbuf_i++] = c;
+        }
+    }
+    if (!is_space) {
+        if (cmdbuf_i >= sizeof cmdbuf) {
+            return -1;
+        }
+        cmdbuf[cmdbuf_i++] = 0;
+    }
+    if (args_i >= sizeof args / sizeof args[0]) {
+        return -1;
+    }
+    args[args_i] = NULL;
+    if ((child = vfork()) == (pid_t) -1) {
+        return -1;
+    } else if (child == (pid_t) 0) {
+        execvp(args[0], args);
+        _exit(1);
+    } else if (waitpid(child, &exit_status, 0) == (pid_t) -1 ||
+               !WIFEXITED(exit_status)) {
+        return -1;
+    }
+    return 0;
+}
+
+typedef struct Cmds {
+    const char* const* set;
+    const char* const* unset;
+} Cmds;
+
+static Cmds
+firewall_rules_cmds(const Context* context)
+{
+    if (context->is_server) {
+#ifdef __linux__
+        static const char *set_cmds
+            []   = { "sysctl net.ipv4.ip_forward=1",
+                   "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
+                   "ip link set dev $IF_NAME up",
+                   "iptables -t nat -A POSTROUTING -o $EXT_IF_NAME -s "
+                   "$REMOTE_TUN_IP -j MASQUERADE",
+                   "iptables -t filter -A FORWARD -i $EXT_IF_NAME -o $IF_NAME "
+                   "-m state --state RELATED,ESTABLISHED -j ACCEPT",
+                   "iptables -t filter -A FORWARD -i $IF_NAME -o $EXT_IF_NAME "
+                   "-j ACCEPT",
+                   NULL },
+   *unset_cmds[] = {
+       "iptables -t nat -D POSTROUTING -o $EXT_IF_NAME -s $REMOTE_TUN_IP -j "
+       "MASQUERADE",
+       "iptables -t filter -D FORWARD -i $EXT_IF_NAME -o $IF_NAME -m state "
+       "--state RELATED,ESTABLISHED -j ACCEPT",
+       "iptables -t filter -D FORWARD -i $IF_NAME -o $EXT_IF_NAME -j ACCEPT",
+       NULL
+   };
+#else
+        static const char *const *set_cmds = NULL, *const *unset_cmds = NULL;
+#endif
+        return (Cmds){ set_cmds, unset_cmds };
+    } else {
+#if defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
+        static const char *set_cmds
+            []   = { "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
+                   "ifconfig $IF_NAME inet6 $LOCAL_TUN_IP6 $REMOTE_TUN_IP6 "
+                   "prefixlen 128 up",
+                   "route add $EXT_IP $EXT_GW_IP",
+                   "route add 0/1 $REMOTE_TUN_IP",
+                   "route add 128/1 $REMOTE_TUN_IP",
+                   "route add -inet6 -blackhole 0000::/1 $REMOTE_TUN_IP6",
+                   "route add -inet6 -blackhole 8000::/1 $REMOTE_TUN_IP6",
+                   NULL },
+   *unset_cmds[] = { "route delete $EXT_IP $EXT_GW_IP", NULL };
+#elif defined(__linux__)
+        static const char *
+            set_cmds[]   = { "sysctl net.ipv4.tcp_congestion_control=bbr",
+                           "ip link set dev $IF_NAME up",
+                           "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev "
+                           "$IF_NAME",
+                           "ip -6 addr add $LOCAL_TUN_IP6 peer $REMOTE_TUN_IP6 "
+                           "dev $IF_NAME",
+                           "ip route add $EXT_IP via $EXT_GW_IP",
+                           "ip route add 0/1 via $REMOTE_TUN_IP",
+                           "ip route add 128/1 via $REMOTE_TUN_IP",
+                           "ip -6 route add 0/1 via $REMOTE_TUN_IP6",
+                           "ip -6 route add 128/1 via $REMOTE_TUN_IP6",
+                           NULL },
+           *unset_cmds[] = { "ip route del $EXT_IP via $EXT_GW_IP", NULL };
+#else
+        static const char *const *set_cmds = NULL, *const *unset_cmds = NULL;
+#endif
+        return (Cmds){ set_cmds, unset_cmds };
+    }
+}
+
+static int
+firewall_rules(Context* context, int set)
+{
+    const char* substs[][2] = { { "$LOCAL_TUN_IP6", context->local_tun_ip6 },
+                                { "$REMOTE_TUN_IP6", context->remote_tun_ip6 },
+                                { "$LOCAL_TUN_IP", context->local_tun_ip },
+                                { "$REMOTE_TUN_IP", context->remote_tun_ip },
+                                { "$EXT_IP", context->server_ip },
+                                { "$EXT_PORT", context->server_port },
+                                { "$EXT_IF_NAME", context->ext_if_name },
+                                { "$EXT_GW_IP", context->ext_gw_ip },
+                                { "$IF_NAME", context->if_name },
+                                { NULL, NULL } };
+    const char* const* cmds;
+    size_t             i;
+
+    if (context->firewall_rules_set == set) {
+        return 0;
+    }
+    if ((cmds = (set ? firewall_rules_cmds(context).set
+                     : firewall_rules_cmds(context).unset)) == NULL) {
+        fprintf(stderr,
+                "Routing commands for that operating system have not been "
+                "added yet.\n");
+        return 0;
+    }
+    for (i = 0; cmds[i] != NULL; i++) {
+        if (shell_cmd(substs, cmds[i]) != 0) {
+            fprintf(stderr, "Unable to run [%s]: [%s]\n", cmds[i],
+                    strerror(errno));
+            return -1;
+        }
+    }
+    context->firewall_rules_set = set;
     return 0;
 }
 
@@ -646,181 +823,6 @@ tcp_accept(Context* context, int listen_fd)
 }
 
 static int
-shell_cmd(const char* substs[][2], const char* args_str)
-{
-    char*  args[64];
-    char   cmdbuf[4096];
-    pid_t  child;
-    size_t args_i = 0, cmdbuf_i = 0, args_str_i, i;
-    int    c, exit_status, is_space = 1;
-
-    errno = ENOSPC;
-    for (args_str_i = 0; (c = args_str[args_str_i]) != 0; args_str_i++) {
-        if (isspace((unsigned char) c)) {
-            if (!is_space) {
-                if (cmdbuf_i >= sizeof cmdbuf) {
-                    return -1;
-                }
-                cmdbuf[cmdbuf_i++] = 0;
-            }
-            is_space = 1;
-            continue;
-        }
-        if (is_space) {
-            if (args_i >= sizeof args / sizeof args[0]) {
-                return -1;
-            }
-            args[args_i++] = &cmdbuf[cmdbuf_i];
-        }
-        is_space = 0;
-        for (i = 0; substs[i][0] != NULL; i++) {
-            size_t pat_len = strlen(substs[i][0]), sub_len;
-            if (!strncmp(substs[i][0], &args_str[args_str_i], pat_len)) {
-                sub_len = strlen(substs[i][1]);
-                if (sizeof cmdbuf - cmdbuf_i <= sub_len) {
-                    return -1;
-                }
-                memcpy(&cmdbuf[cmdbuf_i], substs[i][1], sub_len);
-                args_str_i += pat_len - 1;
-                cmdbuf_i += sub_len;
-                break;
-            }
-        }
-        if (substs[i][0] == NULL) {
-            if (cmdbuf_i >= sizeof cmdbuf) {
-                return -1;
-            }
-            cmdbuf[cmdbuf_i++] = c;
-        }
-    }
-    if (!is_space) {
-        if (cmdbuf_i >= sizeof cmdbuf) {
-            return -1;
-        }
-        cmdbuf[cmdbuf_i++] = 0;
-    }
-    if (args_i >= sizeof args / sizeof args[0]) {
-        return -1;
-    }
-    args[args_i] = NULL;
-    if ((child = vfork()) == (pid_t) -1) {
-        return -1;
-    } else if (child == (pid_t) 0) {
-        execvp(args[0], args);
-        _exit(1);
-    } else if (waitpid(child, &exit_status, 0) == (pid_t) -1 ||
-               !WIFEXITED(exit_status)) {
-        return -1;
-    }
-    return 0;
-}
-
-typedef struct Cmds {
-    const char* const* set;
-    const char* const* unset;
-} Cmds;
-
-static Cmds
-firewall_rules_cmds(const Context* context)
-{
-    if (context->is_server) {
-#ifdef __linux__
-        static const char *set_cmds
-            []   = { "sysctl net.ipv4.ip_forward=1",
-                   "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
-                   "ip link set dev $IF_NAME up",
-                   "iptables -t nat -A POSTROUTING -o $EXT_IF_NAME -s "
-                   "$REMOTE_TUN_IP -j MASQUERADE",
-                   "iptables -t filter -A FORWARD -i $EXT_IF_NAME -o $IF_NAME "
-                   "-m state --state RELATED,ESTABLISHED -j ACCEPT",
-                   "iptables -t filter -A FORWARD -i $IF_NAME -o $EXT_IF_NAME "
-                   "-j ACCEPT",
-                   NULL },
-   *unset_cmds[] = {
-       "iptables -t nat -D POSTROUTING -o $EXT_IF_NAME -s $REMOTE_TUN_IP -j "
-       "MASQUERADE",
-       "iptables -t filter -D FORWARD -i $EXT_IF_NAME -o $IF_NAME -m state "
-       "--state RELATED,ESTABLISHED -j ACCEPT",
-       "iptables -t filter -D FORWARD -i $IF_NAME -o $EXT_IF_NAME -j ACCEPT",
-       NULL
-   };
-#else
-        static const char *const *set_cmds = NULL, *const *unset_cmds = NULL;
-#endif
-        return (Cmds){ set_cmds, unset_cmds };
-    } else {
-#if defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
-        static const char *set_cmds
-            []   = { "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
-                   "ifconfig $IF_NAME inet6 $LOCAL_TUN_IP6 $REMOTE_TUN_IP6 "
-                   "prefixlen 128 up",
-                   "route add $EXT_IP $EXT_GW_IP",
-                   "route add 0/1 $REMOTE_TUN_IP",
-                   "route add 128/1 $REMOTE_TUN_IP",
-                   "route add -inet6 -blackhole 0000::/1 $REMOTE_TUN_IP6",
-                   "route add -inet6 -blackhole 8000::/1 $REMOTE_TUN_IP6",
-                   NULL },
-   *unset_cmds[] = { "route delete $EXT_IP $EXT_GW_IP", NULL };
-#elif defined(__linux__)
-        static const char *
-            set_cmds[]   = { "sysctl net.ipv4.tcp_congestion_control=bbr",
-                           "ip link set dev $IF_NAME up",
-                           "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev "
-                           "$IF_NAME",
-                           "ip -6 addr add $LOCAL_TUN_IP6 peer $REMOTE_TUN_IP6 "
-                           "dev $IF_NAME",
-                           "ip route add $EXT_IP via $EXT_GW_IP",
-                           "ip route add 0/1 via $REMOTE_TUN_IP",
-                           "ip route add 128/1 via $REMOTE_TUN_IP",
-                           "ip -6 route add 0/1 via $REMOTE_TUN_IP6",
-                           "ip -6 route add 128/1 via $REMOTE_TUN_IP6",
-                           NULL },
-           *unset_cmds[] = { "ip route del $EXT_IP via $EXT_GW_IP", NULL };
-#else
-        static const char *const *set_cmds = NULL, *const *unset_cmds = NULL;
-#endif
-        return (Cmds){ set_cmds, unset_cmds };
-    }
-}
-
-static int
-firewall_rules(Context* context, int set)
-{
-    const char* substs[][2] = { { "$LOCAL_TUN_IP6", context->local_tun_ip6 },
-                                { "$REMOTE_TUN_IP6", context->remote_tun_ip6 },
-                                { "$LOCAL_TUN_IP", context->local_tun_ip },
-                                { "$REMOTE_TUN_IP", context->remote_tun_ip },
-                                { "$EXT_IP", context->server_ip },
-                                { "$EXT_PORT", context->server_port },
-                                { "$EXT_IF_NAME", context->ext_if_name },
-                                { "$EXT_GW_IP", context->ext_gw_ip },
-                                { "$IF_NAME", context->if_name },
-                                { NULL, NULL } };
-    const char* const* cmds;
-    size_t             i;
-
-    if (context->firewall_rules_set == set) {
-        return 0;
-    }
-    if ((cmds = (set ? firewall_rules_cmds(context).set
-                     : firewall_rules_cmds(context).unset)) == NULL) {
-        fprintf(stderr,
-                "Routing commands for that operating system have not been "
-                "added yet.\n");
-        return 0;
-    }
-    for (i = 0; cmds[i] != NULL; i++) {
-        if (shell_cmd(substs, cmds[i]) != 0) {
-            fprintf(stderr, "Unable to run [%s]: [%s]\n", cmds[i],
-                    strerror(errno));
-            return -1;
-        }
-    }
-    context->firewall_rules_set = set;
-    return 0;
-}
-
-static int
 client_key_exchange(Context* context)
 {
     uint32_t st[12];
@@ -860,6 +862,18 @@ client_key_exchange(Context* context)
 static int
 client_connect(Context* context)
 {
+    const char* ext_gw_ip;
+
+    if (context->wanted_ext_gw_ip == NULL &&
+        (ext_gw_ip = get_default_gw_ip()) != NULL &&
+        strcmp(ext_gw_ip, context->ext_gw_ip) != 0) {
+        printf("Gateway changed from [%s] to [%s]\n", context->ext_gw_ip,
+               ext_gw_ip);
+        firewall_rules(context, 0);
+        snprintf(context->ext_gw_ip, sizeof context->ext_gw_ip, "%s",
+                 ext_gw_ip);
+        firewall_rules(context, 1);
+    }
     memset(context->uc_st, 0, sizeof context->uc_st);
     context->uc_st[context->is_server][0] ^= 1;
     context->client_fd = tcp_client(context->server_ip, context->server_port);
