@@ -86,7 +86,7 @@ static volatile sig_atomic_t exit_signal_received = 0;
 static void
 signal_handler(int sig)
 {
-    (void) sig;
+    signal(sig, SIG_DFL);
     exit_signal_received = 1;
 }
 
