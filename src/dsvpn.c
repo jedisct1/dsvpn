@@ -372,7 +372,7 @@ static char *read_from_shell_command(char *result, size_t sizeof_result, const c
     if ((pnt = strrchr(result, '\n')) != NULL) {
         *pnt = 0;
     }
-    pclose(fp);
+    (void) pclose(fp);
 
     return *result == 0 ? NULL : result;
 }
@@ -629,14 +629,14 @@ static int tcp_client(const char *address, const char *port)
     if (connect(client_fd, (const struct sockaddr *) res->ai_addr, res->ai_addrlen) != 0) {
         freeaddrinfo(res);
         err = errno;
-        close(client_fd);
+        (void) close(client_fd);
         errno = err;
         return -1;
     }
     freeaddrinfo(res);
     if (tcp_opts(client_fd) != 0) {
         err = errno;
-        close(client_fd);
+        (void) close(client_fd);
         errno = err;
         return -1;
     }
