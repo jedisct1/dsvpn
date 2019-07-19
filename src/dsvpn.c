@@ -1073,7 +1073,7 @@ usage(void)
         "dsvpn\t\"client\"\n\t<key file>\n\t<vpn server ip>\n\t<vpn server "
         "port>\n\t<tun interface>|\"auto\"\n\t<local tun "
         "ip>|\"auto\"\n\t<remote tun ip>|\"auto\"\n\t<gateway ip>\"auto\"\n");
-    return;
+    exit(254);
 }
 
 static void
@@ -1098,7 +1098,6 @@ main(int argc, char* argv[])
 
     if (argc < 3) {
         usage();
-        return 0;
     }
     memset(&context, 0, sizeof context);
     context.is_server = strcmp(argv[1], "server") == 0;
@@ -1106,8 +1105,10 @@ main(int argc, char* argv[])
         fprintf(stderr, "Unable to load the key file [%s]\n", argv[2]);
         return 1;
     }
-    context.server_ip =
-        strcmp(argv[3], "auto") == 0 ? "<unspecified ip>" : argv[3];
+    context.server_ip = strcmp(argv[3], "auto") == 0 ? NULL : argv[3];
+    if (context.server_ip == NULL && !context.is_server) {
+        usage();
+    }
     context.server_port =
         (argc <= 4 || strcmp(argv[4], "auto") == 0) ? DEFAULT_PORT : argv[4];
     context.wanted_name =
