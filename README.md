@@ -65,7 +65,7 @@ On MacOS, the VPN server can be specified as a host name. Linux currently requir
 
 ## That's it
 
-You are connected.
+You are connected. Just hit `Ctrl`-`C` to disconnect.
 
 ## Advanced configuration
 
