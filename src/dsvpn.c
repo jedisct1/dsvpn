@@ -675,7 +675,6 @@ firewall_rules_cmds(const Context* context)
                    "-j ACCEPT",
                    NULL },
    *unset_cmds[] = {
-       "ip addr del $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
        "iptables -t nat -D POSTROUTING -o $EXT_IF_NAME -s $REMOTE_TUN_IP -j "
        "MASQUERADE",
        "iptables -t filter -D FORWARD -i $EXT_IF_NAME -o $IF_NAME -m state "
@@ -699,9 +698,7 @@ firewall_rules_cmds(const Context* context)
                    "route add -inet6 -blackhole 0000::/1 $REMOTE_TUN_IP6",
                    "route add -inet6 -blackhole 8000::/1 $REMOTE_TUN_IP6",
                    NULL },
-   *unset_cmds[] = { "route delete $EXT_IP $EXT_GW_IP",
-                     "route delete 0/1 $REMOTE_TUN_IP",
-                     "route delete 128/1 $REMOTE_TUN_IP", NULL };
+   *unset_cmds[] = { "route delete $EXT_IP $EXT_GW_IP", NULL };
 #elif defined(__linux__)
         static const char
             *set_cmds     = { "sysctl net.ipv4.tcp_congestion_control=bbr",
@@ -718,9 +715,7 @@ firewall_rules_cmds(const Context* context)
                           NULL },
             *unset_cmds[] = {
                 "ip addr delete $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
-                "ip route delete $EXT_IP via $EXT_GW_IP",
-                "ip route delete 0/1 via $REMOTE_TUN_IP",
-                "ip route delete 128/1 via $REMOTE_TUN_IP", NULL
+                "ip route delete $EXT_IP via $EXT_GW_IP", NULL
             };
 #else
         static const char *const *set_cmds = NULL, *const *unset_cmds = NULL;
