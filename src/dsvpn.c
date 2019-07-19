@@ -103,8 +103,7 @@ safe_write(const int fd, const void* const buf_, size_t count,
             if (errno == EAGAIN) {
                 pfd.fd     = fd;
                 pfd.events = POLLOUT;
-                if (poll(&pfd, (nfds_t) 1, timeout) == 0) {
-                    errno = ETIMEDOUT;
+                if (poll(&pfd, (nfds_t) 1, timeout) <= 0) {
                     goto ret;
                 }
             } else if (errno != EINTR) {
@@ -130,8 +129,7 @@ safe_read(const int fd, void* const buf_, size_t count, const int timeout)
             if (errno == EAGAIN) {
                 pfd.fd     = fd;
                 pfd.events = POLLIN;
-                if (poll(&pfd, (nfds_t) 1, timeout) == 0) {
-                    errno = ETIMEDOUT;
+                if (poll(&pfd, (nfds_t) 1, timeout) <= 0) {
                     goto ret;
                 }
             } else if (errno != EINTR) {
