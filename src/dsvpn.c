@@ -407,7 +407,7 @@ tcp_client(const char* address, const char* port)
 #endif
     if ((eai = getaddrinfo(address, port, &hints, &res)) != 0 ||
         (res->ai_family != AF_INET && res->ai_family != AF_INET6)) {
-        fprintf(stderr, "Unable to create the client socket: [%s]",
+        fprintf(stderr, "Unable to create the client socket: [%s]\n",
                 gai_strerror(eai));
         errno = EINVAL;
         return -1;
@@ -454,7 +454,7 @@ tcp_listener(const char* address, const char* port)
 #endif
     if ((on = getaddrinfo(address, port, &hints, &res)) != 0 ||
         (res->ai_family != AF_INET && res->ai_family != AF_INET6)) {
-        fprintf(stderr, "Unable to create the listening socket: [%s]",
+        fprintf(stderr, "Unable to create the listening socket: [%s]\n",
                 gai_strerror(on));
         errno = EINVAL;
         return -1;
