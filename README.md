@@ -48,14 +48,32 @@ And copy it on the server and the client.
 ## Usage
 
 ```text
-dsvpn "server"|"client" <key file> <interface>|"auto" <local tun ip> <remote tun ip>
-      <external host>|"auto" <external port> <external interface>
-      <external gateway ip>|"auto"
+dsvpn   "server"
+        <key file>
+        <tun interface>|"auto"
+        <local tun ip>
+        <remote tun ip>
+        <external host>|"auto"
+        <external port>
+        <external interface>|"auto"
+        <external gateway ip>|"auto"
+```
+
+```text
+dsvpn   "client"
+        <key file>
+        <tun interface>|"auto"
+        <local tun ip>
+        <remote tun ip>
+        <external host>
+        <external port>
+        <external interface>
+        <external gateway ip>
 ```
 
 * `server`|`client`: either `server` or `client`.
 * `<key file>`: path to the file with the secret key (e.g. `vpn.key`).
-* `interface`: this is the name of the VPN interface. On Linux, you can set it to anything. Or MacOS, it has to follow a more boring pattern. If you feel lazy, just use `auto` here.
+* `<tun interface>`: this is the name of the VPN interface. On Linux, you can set it to anything. Or MacOS, it has to follow a more boring pattern. If you feel lazy, just use `auto` here.
 * `<local tun ip>`: local IP address of the tunnel. Use any private IP address that you don't use here. For some reason, I tend to pick `192.168.192.254` for the server, and `192.168.192.1` for the client.
 * `<remote tun ip>`: remote IP address of the tunnel. See above. These parameters must the same on the client and on the server, just reversed.
 * `<external host>`: on the client, it should be the IP address or the hostname of the server. On the server, it doesn't matter, so you can just use `auto`.

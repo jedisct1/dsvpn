@@ -995,10 +995,18 @@ static void
 usage(void)
 {
     puts(
-        "Usage: dsvpn \"server\"|\"client\" <key file> <interface>|\"auto\" "
-        "<local tun "
-        "ip> <remote tun ip> <external host>|\"auto\" <external port> "
-        "<external interface> <external gateway ip>|\"auto\"");
+        "Usage:\n"
+        "\n"
+        "dsvpn\t\"server\"\n\t<key file>\n\t<tun interface>|\"auto\"\n\t"
+        "<local tun ip>\n\t<remote tun ip>\n\t<external "
+        "host>|\"auto\"\n\t<external "
+        "port>\n\t<external interface>|\"auto\"\n\t<external gateway "
+        "ip>|\"auto\""
+        "\n\n"
+        "dsvpn\t\"client\"\n\t<key file>\n\t<tun interface>|\"auto\"\n\t"
+        "<local tun ip>\n\t<remote tun ip>\n\t<external host>\n\t<external "
+        "port>\n\t"
+        "<external interface>\n\t<external gateway ip>\n");
     return;
 }
 
@@ -1032,7 +1040,7 @@ main(int argc, char* argv[])
         fprintf(stderr, "Unable to load the key file [%s]\n", argv[3]);
         return 1;
     }
-    context.wanted_name   = argv[3];
+    context.wanted_name   = strcmp(argv[3], "auto") == 0 ? NULL : argv[3];
     context.local_tun_ip  = argv[4];
     context.remote_tun_ip = argv[5];
     context.ext_ip        = argv[6];
@@ -1041,9 +1049,7 @@ main(int argc, char* argv[])
     context.ext_gw_ip     = argv[9];
     get_tun6_addresses(&context);
 
-    context.tun_fd = tun_create(
-        context.if_name,
-        strcmp(context.wanted_name, "auto") == 0 ? NULL : context.wanted_name);
+    context.tun_fd = tun_create(context.if_name, context.wanted_name);
     if (context.tun_fd == -1) {
         perror("tun_create");
         return 1;
