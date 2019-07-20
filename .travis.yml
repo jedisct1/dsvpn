@@ -6,5 +6,4 @@ compiler:
  - clang
  - gcc
 
-script: make -C src
-
+script: make

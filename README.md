@@ -37,7 +37,7 @@ Never ever:
 ## Installation
 
 ```sh
-cd src && make
+make
 ```
 
 ## Secret key

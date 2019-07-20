@@ -35,8 +35,8 @@
 *.i*86
 *.x86_64
 *.hex
-src/dsvpn
-src/*.key
+dsvpn
+*.key
 
 # Debug files
 *.dSYM/
