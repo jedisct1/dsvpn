@@ -860,7 +860,9 @@ static int client_reconnect(Context *context)
 static int event_loop(Context *context)
 {
     struct __attribute__((aligned(16))) {
+#if TAG_LEN < 16 - 2
         unsigned char _pad[16 - TAG_LEN - 2];
+#endif
         unsigned char len[2];
         unsigned char tag[TAG_LEN];
         unsigned char data[MAX_PACKET_LEN];
