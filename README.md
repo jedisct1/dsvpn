@@ -72,7 +72,7 @@ On MacOS, the VPN server can be specified as a host name. Linux currently requir
 
 You are connected. Just hit `Ctrl`-`C` to disconnect.
 
-If you were using a DNS resolver only accessible from the local network, it won't be accessible through the VPN. That might be the only thing you may have to change. Use a public resolver, a local resolver, or DNSCrypt.
+If you were using a DNS resolver only accessible from the local network, it won't be accessible through the VPN. That might be the only thing you may have to change. Use a public resolver, a local resolver, or DNSCrypt. Or send a pull request implementing the required magic to redirect DNS queries to another resolver, for all supported operating systems.
 
 ## Advanced configuration
 
@@ -122,7 +122,7 @@ Sshuttle is very nice and I've been using it a lot in the past, but it's not a V
 
 Everything else I looked at was either too difficult to use, slow, bloated, didn't work on MacOS, didn't work on small devices, was complicated to cross-compile due to dependencies, wasn't maintained, or didn't feel secure.
 
-TCP-over-TCP is not as bad as some documents describe. It works surprisingly well in practice, especially with modern congestion control algorithms (BBR). For traditional algorithms that rely on packet loss, DSVPN has the ability to couple the inner and outer congestion controllers, by setting the BUFFERBLOAT_CONTROL macro to `1` (this requires more CPU cycles, though).
+TCP-over-TCP is not as bad as some documents describe. It works surprisingly well in practice, especially with modern congestion control algorithms (BBR). For traditional algorithms that rely on packet loss, DSVPN has the ability to couple the inner and outer congestion controllers, by setting the `BUFFERBLOAT_CONTROL` macro to `1` (this requires more CPU cycles, though).
 
 ## Cryptography
 
