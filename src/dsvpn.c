@@ -849,7 +849,7 @@ static int client_reconnect(Context *context)
     }
     for (i = 0; exit_signal_received == 0 && i < RECONNECT_ATTEMPTS; i++) {
         puts("Trying to reconnect");
-        sleep(i);
+        sleep(i > 3 ? 3 : i);
         if (client_connect(context) == 0) {
             return 0;
         }
