@@ -1,5 +1,5 @@
-#include "dsvpn.h"
 #include "charm.h"
+#include "dsvpn.h"
 #include "os.h"
 
 static const int POLLFD_TUN = 0, POLLFD_LISTENER = 1, POLLFD_CLIENT = 2, POLLFD_COUNT = 3;
@@ -301,6 +301,7 @@ static int client_connect(Context *context)
     if (client_key_exchange(context) != 0) {
         fprintf(stderr, "Authentication failed\n");
         client_disconnect(context);
+        sleep(1);
         return -1;
     }
     firewall_rules(context, 1);
