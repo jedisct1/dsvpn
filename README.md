@@ -72,7 +72,13 @@ On MacOS, the VPN server can be specified as a host name. Linux currently requir
 
 You are connected. Just hit `Ctrl`-`C` to disconnect.
 
-If you were using a DNS resolver only accessible from the local network, it won't be accessible through the VPN. That might be the only thing you may have to change. Use a public resolver, a local resolver, or DNSCrypt. Or send a pull request implementing the required magic to redirect DNS queries to another resolver, for all supported operating systems.
+Evaggelos Balaskas wrote a great blog post walking through the whole procedure: [A Dead Simple VPN](https://balaskas.gr/blog/2019/07/20/a-dead-simple-vpn/) - Thank you Evaggelos!
+
+## A note on DNS
+
+If you were previously using a DNS resolver only accessible from the local network, it won't be accessible through the VPN. That might be the only thing you may have to change. Use a public resolver, a local resolver, or DNSCrypt.
+
+Or send a pull request implementing the required commands to change and revert the DNS settings, or redirect DNS queries to another resolver, for all supported operating systems.
 
 ## Advanced configuration
 
