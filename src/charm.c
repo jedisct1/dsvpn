@@ -26,6 +26,14 @@
 
 #define ROUNDS 12
 
+static inline void mem_cpy(unsigned char *dst, const unsigned char *src, size_t n)
+{
+    size_t i;
+    for (i = 0; i < n; i++) {
+        dst[i] = src[i];
+    }
+}
+
 static const uint32_t RK[12] = { 0x058, 0x038, 0x3c0, 0x0d0, 0x120, 0x014,
                                  0x060, 0x02c, 0x380, 0x0f0, 0x1a0, 0x012 };
 
@@ -180,7 +188,7 @@ void uc_encrypt(uint32_t st[12], unsigned char *msg, size_t msg_len, unsigned ch
     }
     leftover = msg_len - off;
     memset(padded, 0, 16);
-    memcpy(padded, &msg[off], leftover);
+    mem_cpy(padded, &msg[off], leftover);
     padded[leftover] = 0x80;
     endian_swap_rate(st);
     memcpy(squeezed, st, 16);
@@ -188,7 +196,7 @@ void uc_encrypt(uint32_t st[12], unsigned char *msg, size_t msg_len, unsigned ch
     endian_swap_rate(st);
     st[11] ^= (1UL << 24 | (uint32_t) leftover >> 4 << 25 | 1UL << 26);
     xor128(padded, squeezed);
-    memcpy(&msg[off], padded, leftover);
+    mem_cpy(&msg[off], padded, leftover);
     permute(st);
     squeeze_permute(st, tag);
 }
@@ -214,16 +222,16 @@ int uc_decrypt(uint32_t st[12], unsigned char *msg, size_t msg_len,
     }
     leftover = msg_len - off;
     memset(padded, 0, 16);
-    memcpy(padded, &msg[off], leftover);
+    mem_cpy(padded, &msg[off], leftover);
     endian_swap_rate(st);
     memset(squeezed, 0, 16);
-    memcpy(squeezed, st, leftover);
+    mem_cpy(squeezed, st, leftover);
     xor128(&padded, squeezed);
     padded[leftover] = 0x80;
     xor128(st, padded);
     endian_swap_rate(st);
     st[11] ^= (1UL << 24 | (uint32_t) leftover >> 4 << 25 | 1UL << 26);
-    memcpy(&msg[off], padded, leftover);
+    mem_cpy(&msg[off], padded, leftover);
     permute(st);
     squeeze_permute(st, tag);
     if (equals(expected_tag, tag, expected_tag_len) == 0) {
@@ -249,7 +257,7 @@ void uc_hash(uint32_t st[12], unsigned char h[32], const unsigned char *msg, siz
     }
     leftover = len - off;
     memset(padded, 0, 16);
-    memcpy(padded, &msg[off], leftover);
+    mem_cpy(padded, &msg[off], leftover);
     padded[leftover] = 0x80;
     endian_swap_rate(st);
     xor128(st, padded);
