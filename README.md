@@ -66,8 +66,6 @@ sudo ./dsvpn client vpn.key 34.216.127.34 1959
 
 This is a MacOS client, connecting to the VPN server `34.216.127.34` on port `1959`. The port number is optional here as well.
 
-On MacOS, the VPN server can be specified as a host name. Linux currently requires an IP address.
-
 ## That's it
 
 You are connected. Just hit `Ctrl`-`C` to disconnect.
