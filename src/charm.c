@@ -186,7 +186,7 @@ void uc_encrypt(uint32_t st[12], unsigned char *msg, size_t msg_len, unsigned ch
     memcpy(squeezed, st, 16);
     xor128(st, padded);
     endian_swap_rate(st);
-    st[11] ^= (0x1000000 | (uint32_t) leftover >> 4 << 25);
+    st[11] ^= (1UL << 24 | (uint32_t) leftover >> 4 << 25 | 1UL << 26);
     xor128(padded, squeezed);
     memcpy(&msg[off], padded, leftover);
     permute(st);
@@ -222,7 +222,7 @@ int uc_decrypt(uint32_t st[12], unsigned char *msg, size_t msg_len,
     padded[leftover] = 0x80;
     xor128(st, padded);
     endian_swap_rate(st);
-    st[11] ^= (0x1000000 | (uint32_t) leftover >> 4 << 25);
+    st[11] ^= (1UL << 24 | (uint32_t) leftover >> 4 << 25 | 1UL << 26);
     memcpy(&msg[off], padded, leftover);
     permute(st);
     squeeze_permute(st, tag);
@@ -254,7 +254,7 @@ void uc_hash(uint32_t st[12], unsigned char h[32], const unsigned char *msg, siz
     endian_swap_rate(st);
     xor128(st, padded);
     endian_swap_rate(st);
-    st[11] ^= (0x1000000 | (uint32_t) leftover >> 4 << 25);
+    st[11] ^= (1UL << 24 | (uint32_t) leftover >> 4 << 25);
     permute(st);
     squeeze_permute(st, &h[0]);
     squeeze_permute(st, &h[16]);
