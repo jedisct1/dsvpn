@@ -225,7 +225,7 @@ int uc_decrypt(uint32_t st[12], unsigned char *msg, size_t msg_len,
     mem_cpy(padded, &msg[off], leftover);
     endian_swap_rate(st);
     memset(squeezed, 0, 16);
-    mem_cpy(squeezed, st, leftover);
+    mem_cpy(squeezed, (const void *) st, leftover);
     xor128(&padded, squeezed);
     padded[leftover] = 0x80;
     xor128(st, padded);
