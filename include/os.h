@@ -1,7 +1,7 @@
 #ifndef os_H
 #define os_H 1
 
-#include "dsvpn.h"
+#include "vpn.h"
 
 ssize_t safe_read(const int fd, void *const buf_, size_t count, const int timeout);
 

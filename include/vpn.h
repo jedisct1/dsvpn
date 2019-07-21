@@ -1,5 +1,5 @@
-#ifndef dsvpn_H
-#define dsvpn_H 1
+#ifndef vpn_H
+#define vpn_H 1
 
 #include <sys/ioctl.h>
 #include <sys/socket.h>

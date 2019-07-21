@@ -1,5 +1,5 @@
+#include "vpn.h"
 #include "charm.h"
-#include "dsvpn.h"
 #include "os.h"
 
 static const int POLLFD_TUN = 0, POLLFD_LISTENER = 1, POLLFD_CLIENT = 2, POLLFD_COUNT = 3;
@@ -339,7 +339,9 @@ static int event_loop(Context *context)
         unsigned char len[2];
         unsigned char tag[TAG_LEN];
         unsigned char data[MAX_PACKET_LEN];
-    } buf;
+        size_t        pos;
+        const size_t  rsize;
+    } tun_buf, client_buf = { .pos = 0, .rsize = 2 + TAG_LEN + MAX_PACKET_LEN };
     struct pollfd *const fds = context->fds;
     ssize_t              len;
     int                  found_fds;
@@ -370,7 +372,7 @@ static int event_loop(Context *context)
         return -1;
     }
     if (fds[POLLFD_TUN].revents & POLLIN) {
-        len = tun_read(context->tun_fd, buf.data, sizeof buf.data);
+        len = tun_read(context->tun_fd, tun_buf.data, sizeof tun_buf.data);
         if (len <= 0) {
             perror("tun_read");
             return -1;
@@ -384,14 +386,15 @@ static int event_loop(Context *context)
             ssize_t       writenb;
             uint16_t      binlen = endian_swap16((uint16_t) len);
 
-            memcpy(buf.len, &binlen, 2);
-            uc_encrypt(context->uc_st[0], buf.data, len, tag_full);
-            memcpy(buf.tag, tag_full, TAG_LEN);
-            writenb = safe_write_partial(context->client_fd, buf.len, 2U + TAG_LEN + len);
+            memcpy(tun_buf.len, &binlen, 2);
+            uc_encrypt(context->uc_st[0], tun_buf.data, len, tag_full);
+            memcpy(tun_buf.tag, tag_full, TAG_LEN);
+            writenb = safe_write_partial(context->client_fd, tun_buf.len, 2U + TAG_LEN + len);
             if (writenb != (ssize_t)(2U + TAG_LEN + len)) {
                 if (errno == EAGAIN) {
                     context->congestion = 1;
-                    writenb = safe_write(context->client_fd, buf.len, 2U + TAG_LEN + len, TIMEOUT);
+                    writenb =
+                        safe_write(context->client_fd, tun_buf.len, 2U + TAG_LEN + len, TIMEOUT);
                 }
             }
             if (writenb != (ssize_t)(2U + TAG_LEN + len)) {
@@ -411,10 +414,11 @@ static int event_loop(Context *context)
             len = -1;
         } else {
             len = (ssize_t) endian_swap16(binlen);
-            if ((size_t) len > sizeof buf.data) {
+            if ((size_t) len > sizeof client_buf.data) {
                 len = -1;
             } else {
-                len = safe_read(context->client_fd, buf.tag, TAG_LEN + (size_t) binlen, TIMEOUT);
+                len = safe_read(context->client_fd, client_buf.tag, TAG_LEN + (size_t) binlen,
+                                TIMEOUT);
             }
         }
         if (len < TAG_LEN) {
@@ -422,12 +426,12 @@ static int event_loop(Context *context)
             return client_reconnect(context);
         } else {
             len -= TAG_LEN;
-            if (uc_decrypt(context->uc_st[1], buf.data, len, buf.tag, TAG_LEN) != 0) {
+            if (uc_decrypt(context->uc_st[1], client_buf.data, len, client_buf.tag, TAG_LEN) != 0) {
                 fprintf(stderr, "Corrupted stream\n");
                 sleep(1);
                 return client_reconnect(context);
             }
-            if (tun_write(context->tun_fd, buf.data, len) != len) {
+            if (tun_write(context->tun_fd, client_buf.data, len) != len) {
                 perror("tun_write");
             }
         }

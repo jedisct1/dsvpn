@@ -1,5 +1,5 @@
 #include "os.h"
-#include "dsvpn.h"
+#include "vpn.h"
 
 extern volatile sig_atomic_t exit_signal_received;
 
