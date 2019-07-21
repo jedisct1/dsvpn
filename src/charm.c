@@ -130,7 +130,9 @@ static inline void endian_swap_all(uint32_t st[12])
 static inline void xor128(void *out, const void *in)
 {
 #ifdef __SSSE3__
-    _mm_storeu_si128(out, _mm_xor_si128(_mm_loadu_si128(out), _mm_loadu_si128(in)));
+    _mm_storeu_si128((__m128i *) out,
+                     _mm_xor_si128(_mm_loadu_si128((const __m128i *) out),
+                                   _mm_loadu_si128((const __m128i *) in)));
 #else
     unsigned char *      out_ = (unsigned char *) out;
     const unsigned char *in_  = (const unsigned char *) in;
@@ -225,7 +227,7 @@ int uc_decrypt(uint32_t st[12], unsigned char *msg, size_t msg_len,
     mem_cpy(padded, &msg[off], leftover);
     endian_swap_rate(st);
     memset(squeezed, 0, 16);
-    mem_cpy(squeezed, (const void *) st, leftover);
+    mem_cpy(squeezed, (const unsigned char *) (const void *) st, leftover);
     xor128(&padded, squeezed);
     padded[leftover] = 0x80;
     xor128(st, padded);
