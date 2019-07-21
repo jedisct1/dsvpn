@@ -424,6 +424,7 @@ static int event_loop(Context *context)
             len -= TAG_LEN;
             if (uc_decrypt(context->uc_st[1], buf.data, len, buf.tag, TAG_LEN) != 0) {
                 fprintf(stderr, "Corrupted stream\n");
+                sleep(1);
                 return client_reconnect(context);
             }
             if (tun_write(context->tun_fd, buf.data, len) != len) {
