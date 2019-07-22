@@ -34,6 +34,10 @@
 #include <sys/sys_domain.h>
 #endif
 
+#ifdef __OpenBSD__
+#include <sys/signal.h>
+#endif
+
 #define DEFAULT_MTU 9000
 #define RECONNECT_ATTEMPTS 30
 #define TAG_LEN 6
