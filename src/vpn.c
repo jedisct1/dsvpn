@@ -567,6 +567,9 @@ int main(int argc, char *argv[])
     if (tun_set_mtu(context.if_name, DEFAULT_MTU) != 0) {
         perror("mtu");
     }
+#ifdef __OpenBSD__
+    pledge("stdio proc exec dns inet", NULL);
+#endif
     if (context.is_server && firewall_rules(&context, 1) != 0) {
         return -1;
     }
