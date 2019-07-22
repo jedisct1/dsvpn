@@ -419,7 +419,7 @@ static int event_loop(Context *context)
         size_t   len_with_header;
         ssize_t  readnb;
 
-        if ((readnb = safe_read_partial(context->client_fd, &client_buf->len[client_buf->pos],
+        if ((readnb = safe_read_partial(context->client_fd, client_buf->len + client_buf->pos,
                                         2 + TAG_LEN + MAX_PACKET_LEN - client_buf->pos)) <= 0) {
             puts("Client disconnected");
             return client_reconnect(context);
@@ -441,8 +441,11 @@ static int event_loop(Context *context)
                 perror("tun_write");
             }
             if (2 + TAG_LEN + MAX_PACKET_LEN != len_with_header) {
-                unsigned char *rbuf = &client_buf->len[0];
-                memmove(rbuf, rbuf + len_with_header, client_buf->pos - len_with_header);
+                unsigned char *rbuf      = client_buf->len;
+                size_t         remaining = client_buf->pos - len_with_header, i;
+                for (i = 0; i < remaining; i++) {
+                    rbuf[i] = rbuf[len_with_header + i];
+                }
             }
             client_buf->pos -= len_with_header;
         }
