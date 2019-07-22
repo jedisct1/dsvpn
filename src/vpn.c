@@ -4,6 +4,16 @@
 
 static const int POLLFD_TUN = 0, POLLFD_LISTENER = 1, POLLFD_CLIENT = 2, POLLFD_COUNT = 3;
 
+typedef struct __attribute__((aligned(16))) Buf_ {
+#if TAG_LEN < 16 - 2
+    unsigned char _pad[16 - TAG_LEN - 2];
+#endif
+    unsigned char len[2];
+    unsigned char tag[TAG_LEN];
+    unsigned char data[MAX_PACKET_LEN];
+    size_t        pos;
+} Buf;
+
 typedef struct Context_ {
     const char *  wanted_name;
     const char *  local_tun_ip;
@@ -22,6 +32,8 @@ typedef struct Context_ {
     int           listen_fd;
     int           congestion;
     int           firewall_rules_set;
+    Buf           tun_buf;
+    Buf           client_buf;
     struct pollfd fds[3];
     uint32_t      uc_kx_st[12];
     uint32_t      uc_st[2][12];
@@ -280,6 +292,8 @@ static int client_connect(Context *context)
 {
     const char *ext_gw_ip;
 
+    context->client_buf.pos = 0;
+    memset(context->client_buf.data, 0, sizeof context->client_buf.data);
     if (context->wanted_ext_gw_ip == NULL && (ext_gw_ip = get_default_gw_ip()) != NULL &&
         strcmp(ext_gw_ip, context->ext_gw_ip) != 0) {
         printf("Gateway changed from [%s] to [%s]\n", context->ext_gw_ip, ext_gw_ip);
@@ -332,17 +346,9 @@ static int client_reconnect(Context *context)
 
 static int event_loop(Context *context)
 {
-    struct __attribute__((aligned(16))) {
-#if TAG_LEN < 16 - 2
-        unsigned char _pad[16 - TAG_LEN - 2];
-#endif
-        unsigned char len[2];
-        unsigned char tag[TAG_LEN];
-        unsigned char data[MAX_PACKET_LEN];
-        size_t        pos;
-        const size_t  rsize;
-    } tun_buf, client_buf = { .pos = 0, .rsize = 2 + TAG_LEN + MAX_PACKET_LEN };
     struct pollfd *const fds = context->fds;
+    Buf                  tun_buf;
+    Buf *                client_buf = &context->client_buf;
     ssize_t              len;
     int                  found_fds;
     int                  new_client_fd;
@@ -364,6 +370,8 @@ static int event_loop(Context *context)
             (void) close(context->client_fd);
         }
         context->client_fd = new_client_fd;
+        client_buf->pos    = 0;
+        memset(client_buf->data, 0, sizeof client_buf->data);
         puts("Accepted");
         fds[POLLFD_CLIENT] = (struct pollfd){ .fd = context->client_fd, .events = POLLIN };
     }
@@ -409,31 +417,35 @@ static int event_loop(Context *context)
     }
     if (fds[POLLFD_CLIENT].revents & POLLIN) {
         uint16_t binlen;
+        size_t   len_with_header;
+        ssize_t  readnb;
 
-        if (safe_read(context->client_fd, &binlen, sizeof binlen, TIMEOUT) != sizeof binlen) {
-            len = -1;
-        } else {
-            len = (ssize_t) endian_swap16(binlen);
-            if ((size_t) len > sizeof client_buf.data) {
-                len = -1;
-            } else {
-                len = safe_read(context->client_fd, client_buf.tag, TAG_LEN + (size_t) binlen,
-                                TIMEOUT);
-            }
-        }
-        if (len < TAG_LEN) {
+        if ((readnb = safe_read_partial(context->client_fd, &client_buf->len[client_buf->pos],
+                                        2 + TAG_LEN + MAX_PACKET_LEN - client_buf->pos)) <= 0) {
             puts("Client disconnected");
             return client_reconnect(context);
-        } else {
-            len -= TAG_LEN;
-            if (uc_decrypt(context->uc_st[1], client_buf.data, len, client_buf.tag, TAG_LEN) != 0) {
+        }
+        client_buf->pos += readnb;
+        while (client_buf->pos >= 2 + TAG_LEN) {
+            memcpy(&binlen, client_buf->len, 2);
+            len = (ssize_t) endian_swap16(binlen);
+            if (client_buf->pos < (len_with_header = 2 + TAG_LEN + (size_t) len)) {
+                break;
+            }
+            if (uc_decrypt(context->uc_st[1], client_buf->data, len, client_buf->tag, TAG_LEN) !=
+                0) {
                 fprintf(stderr, "Corrupted stream\n");
                 sleep(1);
                 return client_reconnect(context);
             }
-            if (tun_write(context->tun_fd, client_buf.data, len) != len) {
+            if (tun_write(context->tun_fd, client_buf->data, len) != len) {
                 perror("tun_write");
             }
+            if (2 + TAG_LEN + MAX_PACKET_LEN != len_with_header) {
+                memmove(client_buf->len, client_buf->len + len_with_header,
+                        client_buf->pos - len_with_header);
+            }
+            client_buf->pos -= len_with_header;
         }
     }
     return 0;
@@ -511,8 +523,6 @@ int main(int argc, char *argv[])
 {
     Context     context;
     const char *ext_gw_ip;
-
-    (void) safe_read_partial;
 
     if (argc < 3) {
         usage();
