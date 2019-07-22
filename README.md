@@ -9,7 +9,7 @@ DSVPN is a Dead Simple VPN, designed to address the most common use case for usi
 Features:
 
 * Runs on TCP. Works pretty much everywhere, including on public WiFi where only TCP/443 is open or reliable.
-* Secure. Doesn't perform any heap memory allocations. Uses modern cryptography.
+* Secure. Low memory usage. Doesn't perform any heap memory allocations. Uses modern cryptography.
 * Small (~25 KB), with an equally small and readable code base. No external dependencies
 * Works out of the box. No lousy documentation to read. No configuration file. No post-configuration. Run a single-line command on the server, a similar one on the client and you're done. No firewall and routing rules to manually mess with.
 * Works with Linux (client, server) and MacOS/OpenBSD (client). Adding support for other operating systems is trivial.
@@ -22,9 +22,9 @@ Next:
 
 Maybe:
 
+* Automatically change the DNS settings of the client to the default resolver used by the server
 * The ability to run custom commands after the link is up
 * Support for multiple clients
-* `pledge()`, `chroot()`, non-root.
 
 Non-features:
 
@@ -126,7 +126,7 @@ Sshuttle is very nice and I've been using it a lot in the past, but it's not a V
 
 Everything else I looked at was either too difficult to use, slow, bloated, didn't work on MacOS, didn't work on small devices, was complicated to cross-compile due to dependencies, wasn't maintained, or didn't feel secure.
 
-TCP-over-TCP is not as bad as some documents describe. It works surprisingly well in practice, especially with modern congestion control algorithms (BBR). For traditional algorithms that rely on packet loss, DSVPN has the ability to couple the inner and outer congestion controllers, by setting the `BUFFERBLOAT_CONTROL` macro to `1` (this requires more CPU cycles, though).
+TCP-over-TCP is not as bad as some documents describe. It works surprisingly well in practice, especially with modern congestion control algorithms (BBR). For traditional algorithms that rely on packet loss, DSVPN couples the inner and outer congestion controllers by lowering `TCP_NOTSENT_LOWAT` and dropping packets when congestion is detected at the outer layer.
 
 ## Cryptography
 
@@ -136,4 +136,4 @@ The cryptographic primitives used in DSVPN are available as a standalone project
 
 None.
 
-This is a weekend project, and this is what I use, because it solves a problem I had. Extending it to solve different problems is not planned, but feel free to fork it and tailor it to your needs!
+This is not intended to be a replacement for GloryTun or WireGuard. This is a weekend project, and this is what I use, because it solves a problem I had. Extending it to solve different problems is not planned, but feel free to fork it and tailor it to your needs!
