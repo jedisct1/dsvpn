@@ -32,7 +32,6 @@ typedef struct Context_ {
     int           listen_fd;
     int           congestion;
     int           firewall_rules_set;
-    Buf           tun_buf;
     Buf           client_buf;
     struct pollfd fds[3];
     uint32_t      uc_kx_st[12];
