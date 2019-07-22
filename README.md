@@ -9,22 +9,22 @@ DSVPN is a Dead Simple VPN, designed to address the most common use case for usi
 Features:
 
 * Runs on TCP. Works pretty much everywhere, including on public WiFi where only TCP/443 is open or reliable.
-* Secure. Low memory usage. Doesn't perform any heap memory allocations. Uses modern cryptography.
-* Small (~25 KB), with an equally small and readable code base. No external dependencies
+* Low and constant memory footprint. Doesn't perform any heap memory allocations.
+* Small (~25 KB), with an equally small and readable code base. No external dependencies.
 * Works out of the box. No lousy documentation to read. No configuration file. No post-configuration. Run a single-line command on the server, a similar one on the client and you're done. No firewall and routing rules to manually mess with.
 * Works with Linux (client, server) and MacOS/OpenBSD (client). Adding support for other operating systems is trivial.
-* Blocks IPv6 on the client to prevent IPv6 leaks.
+* Doesn't leak between reconnects if the network doesn't change. Blocks IPv6 on the client to prevent IPv6 leaks.
 
 Next:
 
-* Optimized ARM (NEON) implementation
-* Make everything non-blocking, reduce the number of system calls
+* Optimized ARM (NEON) implementation.
+* Make the handshake non-blocking.
 
 Maybe:
 
-* Automatically change the DNS settings of the client to the default resolver used by the server
-* The ability to run custom commands after the link is up
-* Support for multiple clients
+* Automatically change the DNS settings of the client to the default resolver used by the server.
+* The ability to run custom commands after the link is up.
+* Support for multiple clients.
 
 Non-features:
 
