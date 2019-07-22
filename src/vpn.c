@@ -399,11 +399,10 @@ static int event_loop(Context *context)
             memcpy(tun_buf.tag, tag_full, TAG_LEN);
             writenb = safe_write_partial(context->client_fd, tun_buf.len, 2U + TAG_LEN + len);
             if (writenb != (ssize_t)(2U + TAG_LEN + len)) {
-                if (errno == EAGAIN) {
+                if (writenb == (ssize_t) -1) {
                     context->congestion = 1;
-                    writenb =
-                        safe_write(context->client_fd, tun_buf.len, 2U + TAG_LEN + len, TIMEOUT);
                 }
+                writenb = safe_write(context->client_fd, tun_buf.len, 2U + TAG_LEN + len, TIMEOUT);
             }
             if (writenb != (ssize_t)(2U + TAG_LEN + len)) {
                 perror("safe_write (client)");
