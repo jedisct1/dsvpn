@@ -442,8 +442,8 @@ static int event_loop(Context *context)
                 perror("tun_write");
             }
             if (2 + TAG_LEN + MAX_PACKET_LEN != len_with_header) {
-                memmove(client_buf->len, client_buf->len + len_with_header,
-                        client_buf->pos - len_with_header);
+                unsigned char *rbuf = &client_buf->len[0];
+                memmove(rbuf, rbuf + len_with_header, client_buf->pos - len_with_header);
             }
             client_buf->pos -= len_with_header;
         }
