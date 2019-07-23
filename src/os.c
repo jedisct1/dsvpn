@@ -453,7 +453,7 @@ Cmds firewall_rules_cmds(int is_server)
             *set_cmds[]   = { "sysctl net.ipv4.tcp_congestion_control=bbr",
                             "ip link set dev $IF_NAME up",
                             "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
-                            "ip -6 addr add $LOCAL_TUN_IP6 peer $REMOTE_TUN_IP6 dev $IF_NAME",
+                            "ip -6 addr add $LOCAL_TUN_IP6 peer $REMOTE_TUN_IP6/96 dev $IF_NAME",
                             "ip route add $EXT_IP via $EXT_GW_IP",
                             "ip route add 0/1 via $REMOTE_TUN_IP",
                             "ip route add 128/1 via $REMOTE_TUN_IP",
