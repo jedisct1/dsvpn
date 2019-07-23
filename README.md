@@ -75,7 +75,9 @@ This is a MacOS client, connecting to the VPN server `34.216.127.34` on port `19
 
 You are connected. Just hit `Ctrl`-`C` to disconnect.
 
-Evaggelos Balaskas wrote a great blog post walking through the whole procedure: [A Dead Simple VPN](https://balaskas.gr/blog/2019/07/20/a-dead-simple-vpn/) - Thank you Evaggelos!
+Evaggelos Balaskas wrote a great blog post walking through the whole procedure: [A Dead Simple VPN](https://balaskas.gr/blog/2019/07/20/a-dead-simple-vpn/).
+
+He also maintains [systemd service files for DSVPN](https://github.com/ebal/scripts/tree/master/dsvpn). Thank you Evaggelos!
 
 ## A note on DNS
 
