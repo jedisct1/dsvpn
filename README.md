@@ -39,6 +39,12 @@ Never ever:
 make
 ```
 
+On Raspberry Pi 3 and 4, use the following command instead to enable NEON optimizations:
+
+```sh
+env OPTFLAGS=-fcpu=neon make
+```
+
 ## Secret key
 
 DSVPN uses a shared secret. Create it with the following command:
