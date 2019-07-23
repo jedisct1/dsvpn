@@ -585,6 +585,7 @@ int main(int argc, char *argv[])
         return -1;
     }
     firewall_rules(&context, 0);
+    puts("Done.");
 
     return 0;
 }
