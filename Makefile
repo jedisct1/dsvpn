@@ -1,4 +1,4 @@
-CFLAGS=-march=native -Ofast -Wall -W -Wshadow -Wmissing-prototypes
+CFLAGS?=-march=native -Ofast -Wall -W -Wshadow -Wmissing-prototypes $(OPTFLAGS)
 
 all: dsvpn
 
