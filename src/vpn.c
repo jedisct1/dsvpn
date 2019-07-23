@@ -243,7 +243,6 @@ static int tcp_accept(Context *context, int listen_fd)
         errno = err;
         return -1;
     }
-    fcntl(client_fd, F_SETFL, fcntl(client_fd, F_GETFL, 0) | O_NONBLOCK);
     context->congestion = 0;
     if (server_key_exchange(context, client_fd) != 0) {
         fprintf(stderr, "Authentication failed\n");
