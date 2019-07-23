@@ -560,7 +560,7 @@ int main(int argc, char *argv[])
     get_tun6_addresses(&context);
     context.tun_fd = tun_create(context.if_name, context.wanted_name);
     if (context.tun_fd == -1) {
-        perror("tun_create");
+        perror("tun device creation");
         return 1;
     }
     printf("Interface: [%s]\n", context.if_name);

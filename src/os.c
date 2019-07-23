@@ -82,6 +82,7 @@ int tun_create(char if_name[IFNAMSIZ], const char *wanted_name)
 
     fd = open("/dev/net/tun", O_RDWR);
     if (fd == -1) {
+        fprintf(stderr, "tuntap module not present. See https://sk.tl/2RdReigK\n");
         return -1;
     }
     ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
