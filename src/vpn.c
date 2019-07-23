@@ -244,6 +244,7 @@ static int tcp_accept(Context *context, int listen_fd)
         return -1;
     }
     context->congestion = 0;
+    fcntl(client_fd, F_SETFL, fcntl(client_fd, F_GETFL, 0) | O_NONBLOCK);
     if (server_key_exchange(context, client_fd) != 0) {
         fprintf(stderr, "Authentication failed\n");
         (void) close(client_fd);
@@ -398,10 +399,12 @@ static int event_loop(Context *context)
             if (writenb != (ssize_t)(2U + TAG_LEN + len)) {
                 if (writenb == (ssize_t) -1) {
                     context->congestion = 1;
+                    writenb             = 0;
                 }
-                writenb = safe_write(context->client_fd, tun_buf.len, 2U + TAG_LEN + len, TIMEOUT);
+                writenb = safe_write(context->client_fd, tun_buf.len + writenb,
+                                     2U + TAG_LEN + len - writenb, TIMEOUT);
             }
-            if (writenb != (ssize_t)(2U + TAG_LEN + len)) {
+            if (writenb < 0) {
                 perror("safe_write (client)");
                 return client_reconnect(context);
             }
