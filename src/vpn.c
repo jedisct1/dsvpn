@@ -383,10 +383,12 @@ static int event_loop(Context *context)
             perror("tun_read");
             return -1;
         }
+#ifdef BUFFERBLOAT_CONTROL
         if (context->congestion) {
             context->congestion = 0;
             return 0;
         }
+#endif
         if (context->client_fd != -1) {
             unsigned char tag_full[16];
             ssize_t       writenb;
@@ -397,10 +399,8 @@ static int event_loop(Context *context)
             memcpy(tun_buf.tag, tag_full, TAG_LEN);
             writenb = safe_write_partial(context->client_fd, tun_buf.len, 2U + TAG_LEN + len);
             if (writenb < (ssize_t) 0) {
-#if BUFFERBLOAT_CONTROL
                 context->congestion = 1;
-#endif
-                writenb = (ssize_t) 0;
+                writenb             = (ssize_t) 0;
             }
             if (writenb != (ssize_t)(2U + TAG_LEN + len)) {
                 writenb = safe_write(context->client_fd, tun_buf.len + writenb,
