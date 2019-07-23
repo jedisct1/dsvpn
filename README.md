@@ -17,7 +17,6 @@ Features:
 
 Next:
 
-* Optimized ARM (NEON) implementation.
 * Make the handshake non-blocking.
 
 Maybe:

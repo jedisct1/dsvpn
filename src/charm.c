@@ -4,6 +4,9 @@
 #ifdef __SSSE3__
 #include <x86intrin.h>
 #endif
+#ifdef __ARM_NEON_FP
+#include <arm_neon.h>
+#endif
 #ifdef __linux__
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
@@ -69,6 +72,43 @@ static void permute(uint32_t st[12])
     _mm_storeu_si128((__m128i *) (void *) &st[0], a);
     _mm_storeu_si128((__m128i *) (void *) &st[4], b);
     _mm_storeu_si128((__m128i *) (void *) &st[8], c);
+}
+#elif defined(__ARM_NEON_FP)
+#define ROL32in128(x, b) vsriq_n_u32(vshlq_n_u32((x), (b)), (x), 32 - (b))
+
+static void permute(uint32_t st[12])
+{
+    uint32x4_t a, b, c, d, e, f;
+    int        r;
+
+    a = vld1q_u32((const uint32_t *) (const void *) &st[0]);
+    b = vld1q_u32((const uint32_t *) (const void *) &st[4]);
+    c = vld1q_u32((const uint32_t *) (const void *) &st[8]);
+    for (r = 0; r < ROUNDS; r++) {
+        d = veorq_u32(veorq_u32(a, b), c);
+        d = vextq_u32(d, d, 3);
+        e = ROL32in128(d, 5);
+        f = ROL32in128(d, 14);
+        e = veorq_u32(e, f);
+        a = veorq_u32(a, e);
+        b = veorq_u32(b, e);
+        f = veorq_u32(c, e);
+        c = ROL32in128(f, 11);
+        b = vextq_u32(b, b, 3);
+        a = veorq_u32(a, vsetq_lane_u32(RK[r], vmovq_n_u32(0), 0));
+        e = vbicq_u32(c, b);
+        d = vbicq_u32(a, c);
+        f = vbicq_u32(b, a);
+        a = veorq_u32(a, e);
+        d = veorq_u32(b, d);
+        c = veorq_u32(c, f);
+        f = vextq_u32(c, c, 2);
+        b = ROL32in128(d, 1);
+        c = ROL32in128(f, 8);
+    }
+    vst1q_u32((uint32_t *) (void *) &st[0], a);
+    vst1q_u32((uint32_t *) (void *) &st[4], b);
+    vst1q_u32((uint32_t *) (void *) &st[8], c);
 }
 #else
 #define ROTR32(x, b) (uint32_t)(((x) >> (b)) | ((x) << (32 - (b))))
