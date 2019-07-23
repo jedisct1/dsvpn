@@ -118,7 +118,9 @@ I needed a VPN that works in an environment where only TCP/80 and TCP/443 are op
 
 WireGuard doesn't work over TCP.
 
-GloryTun is excellent, but requires post-configuration and the maintained branch uses UDP.
+[GloryTun](https://github.com/angt/glorytun) is excellent, but requires post-configuration and the maintained branch uses UDP.
+
+I forgot about [VTUN-libsodium](https://github.com/jedisct1/vtun). But it would have been too much complexity and attack surface for a simple use case.
 
 OpenVPN is horribly difficult to set up.
 
