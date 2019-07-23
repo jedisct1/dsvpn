@@ -243,6 +243,7 @@ static int tcp_accept(Context *context, int listen_fd)
         errno = err;
         return -1;
     }
+    fcntl(client_fd, F_SETFL, fcntl(client_fd, F_GETFL, 0) | O_NONBLOCK);
     context->congestion = 0;
     if (server_key_exchange(context, client_fd) != 0) {
         fprintf(stderr, "Authentication failed\n");
@@ -307,9 +308,7 @@ static int client_connect(Context *context)
         perror("TCP client");
         return -1;
     }
-#if BUFFERBLOAT_CONTROL
     fcntl(context->client_fd, F_SETFL, fcntl(context->client_fd, F_GETFL, 0) | O_NONBLOCK);
-#endif
     context->congestion = 0;
     if (client_key_exchange(context) != 0) {
         fprintf(stderr, "Authentication failed\n");
@@ -570,8 +569,13 @@ int main(int argc, char *argv[])
 #ifdef __OpenBSD__
     pledge("stdio proc exec dns inet", NULL);
 #endif
-    if (context.is_server && firewall_rules(&context, 1) != 0) {
-        return -1;
+    context.firewall_rules_set = -1;
+    if (context.is_server) {
+        if (firewall_rules(&context, 1) != 0) {
+            return -1;
+        }
+    } else {
+        firewall_rules(&context, 0);
     }
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
