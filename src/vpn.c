@@ -396,17 +396,17 @@ static int event_loop(Context *context)
             uc_encrypt(context->uc_st[0], tun_buf.data, len, tag_full);
             memcpy(tun_buf.tag, tag_full, TAG_LEN);
             writenb = safe_write_partial(context->client_fd, tun_buf.len, 2U + TAG_LEN + len);
+            if (writenb < (ssize_t) 0) {
 #if BUFFERBLOAT_CONTROL
-            if (writenb < 0) {
                 context->congestion = 1;
-                writenb             = 0;
-            }
 #endif
+                writenb = (ssize_t) 0;
+            }
             if (writenb != (ssize_t)(2U + TAG_LEN + len)) {
                 writenb = safe_write(context->client_fd, tun_buf.len + writenb,
                                      2U + TAG_LEN + len - writenb, TIMEOUT);
             }
-            if (writenb < 0) {
+            if (writenb < (ssize_t) 0) {
                 perror("safe_write (client)");
                 return client_reconnect(context);
             }
