@@ -485,7 +485,7 @@ static int load_key_file(Context *context, const char *file)
     if ((fd = open(file, O_RDONLY)) == -1) {
         return -1;
     }
-    if (safe_read(fd, key, sizeof key, TIMEOUT) != sizeof key) {
+    if (safe_read(fd, key, sizeof key, -1) != sizeof key) {
         return -1;
         memset(key, 0, sizeof key);
     }
