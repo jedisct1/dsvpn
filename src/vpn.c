@@ -317,7 +317,7 @@ static int client_connect(Context *context)
     context->uc_st[context->is_server][0] ^= 1;
     context->client_fd = tcp_client(context->server_ip, context->server_port);
     if (context->client_fd == -1) {
-        perror("TCP client");
+        perror("Client connection failed");
         return -1;
     }
     fcntl(context->client_fd, F_SETFL, fcntl(context->client_fd, F_GETFL, 0) | O_NONBLOCK);
@@ -372,7 +372,7 @@ static int event_loop(Context *context)
     if (fds[POLLFD_LISTENER].revents & POLLIN) {
         new_client_fd = tcp_accept(context, context->listen_fd);
         if (new_client_fd == -1) {
-            perror("tcp_accept");
+            perror("Accepting a new client failed");
             return 0;
         }
         if (context->client_fd != -1) {
@@ -419,13 +419,13 @@ static int event_loop(Context *context)
                                      2U + TAG_LEN + len - writenb, TIMEOUT);
             }
             if (writenb < (ssize_t) 0) {
-                perror("safe_write (client)");
+                perror("Unable to write data to the TCP socket");
                 return client_reconnect(context);
             }
         }
     }
     if ((fds[POLLFD_CLIENT].revents & POLLERR) || (fds[POLLFD_CLIENT].revents & POLLHUP)) {
-        puts("HUP (client)");
+        puts("Client disconnected");
         return client_reconnect(context);
     }
     if (fds[POLLFD_CLIENT].revents & POLLIN) {
@@ -475,7 +475,7 @@ static int doit(Context *context)
         (struct pollfd){ .fd = context->tun_fd, .events = POLLIN, .revents = 0 };
     if (context->is_server) {
         if ((context->listen_fd = tcp_listener(context->server_ip, context->server_port)) == -1) {
-            perror("tcp_listener");
+            perror("Unable to set up a TCP server");
             return -1;
         }
         context->fds[POLLFD_LISTENER] = (struct pollfd){
