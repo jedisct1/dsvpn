@@ -4,7 +4,7 @@
 #ifdef __SSSE3__
 #include <x86intrin.h>
 #endif
-#ifdef __ARM_NEON_FP
+#if defined(__ARM_NEON_FP) || defined(__aarch64__)
 #include <arm_neon.h>
 #endif
 #ifdef __linux__
@@ -73,7 +73,7 @@ static void permute(uint32_t st[12])
     _mm_storeu_si128((__m128i *) (void *) &st[4], b);
     _mm_storeu_si128((__m128i *) (void *) &st[8], c);
 }
-#elif defined(__ARM_NEON_FP)
+#elif defined(__ARM_NEON_FP) || defined(__aarch64__)
 #define ROL32in128(x, b) vsriq_n_u32(vshlq_n_u32((x), (b)), (x), 32 - (b))
 
 static void permute(uint32_t st[12])
