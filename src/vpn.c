@@ -158,7 +158,7 @@ static int tcp_listener(const char *address, const char *port)
     (void) setsockopt(listen_fd, IPPROTO_IPV6, IPV6_V6ONLY, (char *) (int[]){ 0 }, sizeof(int));
 #endif
 #ifdef TCP_DEFER_ACCEPT
-    (void) setsockopt(listen_fd, SOL_TCP, TCP_DEFER_ACCEPT, (char *) (int[]){ TIMEOUT },
+    (void) setsockopt(listen_fd, SOL_TCP, TCP_DEFER_ACCEPT, (char *) (int[]){ TIMEOUT / 1000 },
                       sizeof(int));
 #endif
     printf("Listening to %s:%s\n", address == NULL ? "*" : address, port);
