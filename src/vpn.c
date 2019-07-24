@@ -129,7 +129,7 @@ static int tcp_client(const char *address, const char *port)
 static int tcp_listener(const char *address, const char *port)
 {
     struct addrinfo hints, *res;
-    int             on;
+    int             eai;
     int             listen_fd;
     int             backlog = 1;
 
@@ -143,21 +143,23 @@ static int tcp_listener(const char *address, const char *port)
         hints.ai_family = AF_INET;
     }
 #endif
-    if ((on = getaddrinfo(address, port, &hints, &res)) != 0 ||
+    if ((eai = getaddrinfo(address, port, &hints, &res)) != 0 ||
         (res->ai_family != AF_INET && res->ai_family != AF_INET6)) {
-        fprintf(stderr, "Unable to create the listening socket: [%s]\n", gai_strerror(on));
+        fprintf(stderr, "Unable to create the listening socket: [%s]\n", gai_strerror(eai));
         errno = EINVAL;
         return -1;
     }
-    on = 1;
     if ((listen_fd = socket(res->ai_family, SOCK_STREAM, IPPROTO_TCP)) == -1 ||
-        setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, (char *) &on, sizeof on) != 0) {
+        setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, (char *) (int[]){ 1 }, sizeof(int)) != 0) {
         freeaddrinfo(res);
         return -1;
     }
 #if defined(IPPROTO_IPV6) && defined(IPV6_V6ONLY)
-    on = 0;
-    (void) setsockopt(listen_fd, IPPROTO_IPV6, IPV6_V6ONLY, (char *) &on, sizeof on);
+    (void) setsockopt(listen_fd, IPPROTO_IPV6, IPV6_V6ONLY, (char *) (int[]){ 0 }, sizeof(int));
+#endif
+#ifdef TCP_DEFER_ACCEPT
+    (void) setsockopt(listen_fd, SOL_TCP, TCP_DEFER_ACCEPT, (char *) (int[]){ TIMEOUT },
+                      sizeof(int));
 #endif
     printf("Listening to %s:%s\n", address == NULL ? "*" : address, port);
     if (bind(listen_fd, (struct sockaddr *) res->ai_addr, (socklen_t) res->ai_addrlen) != 0 ||
@@ -192,9 +194,15 @@ static int server_key_exchange(Context *context, const int client_fd)
 
     memcpy(st, context->uc_kx_st, sizeof st);
     errno = EACCES;
+#ifdef TCP_DEFER_ACCEPT
+    if (safe_read_partial(client_fd, pkt1, sizeof pkt1) != sizeof pkt1) {
+        return -1;
+    }
+#else
     if (safe_read(client_fd, pkt1, sizeof pkt1, TIMEOUT) != sizeof pkt1) {
         return -1;
     }
+#endif
     uc_hash(st, h, pkt1, 32 + 8);
     if (memcmp(h, pkt1 + 32 + 8, 32) != 0) {
         return -1;
@@ -210,7 +218,7 @@ static int server_key_exchange(Context *context, const int client_fd)
     }
     uc_randombytes_buf(pkt2, 32);
     uc_hash(st, pkt2 + 32, pkt2, 32);
-    if (safe_write(client_fd, pkt2, sizeof pkt2, TIMEOUT) != sizeof pkt2) {
+    if (safe_write_partial(client_fd, pkt2, sizeof pkt2) != sizeof pkt2) {
         return -1;
     }
     uc_hash(st, k, NULL, 0);
