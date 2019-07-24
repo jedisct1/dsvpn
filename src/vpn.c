@@ -510,7 +510,7 @@ static int load_key_file(Context *context, const char *file)
 static void usage(void)
 {
     puts(
-        "Usage:\n"
+        "DSVPN " VERSION_STRING " usage:\n"
         "\n"
         "dsvpn\t\"server\"\n\t<key file>\n\t<vpn server ip or name>|\"auto\"\n\t<vpn "
         "server port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun "
@@ -570,10 +570,6 @@ int main(int argc, char *argv[])
     if (context.server_ip_or_name == NULL && !context.is_server) {
         usage();
     }
-    if (context.server_ip_or_name != NULL &&
-        resolve_ip(context.server_ip, sizeof context.server_ip, context.server_ip_or_name) != 0) {
-        return 1;
-    }
     context.server_port    = (argc <= 4 || strcmp(argv[4], "auto") == 0) ? DEFAULT_PORT : argv[4];
     context.wanted_if_name = (argc <= 5 || strcmp(argv[5], "auto") == 0) ? NULL : argv[5];
     context.local_tun_ip   = (argc <= 6 || strcmp(argv[6], "auto") == 0)
@@ -613,6 +609,10 @@ int main(int argc, char *argv[])
         }
     } else {
         firewall_rules(&context, 0);
+    }
+    if (context.server_ip_or_name != NULL &&
+        resolve_ip(context.server_ip, sizeof context.server_ip, context.server_ip_or_name) != 0) {
+        return 1;
     }
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);

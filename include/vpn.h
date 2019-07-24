@@ -35,6 +35,8 @@
 #include <sys/sys_domain.h>
 #endif
 
+#define VERSION_STRING "0.1.0"
+
 #define DEFAULT_MTU 9000
 #define RECONNECT_ATTEMPTS 100
 #define TAG_LEN 6
