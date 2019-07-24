@@ -70,7 +70,7 @@ Here, I use port `1959`. Everything else is set to the default values. If you wa
 sudo ./dsvpn client vpn.key 34.216.127.34 1959
 ```
 
-This is a MacOS client, connecting to the VPN server `34.216.127.34` on port `1959`. The port number is optional here as well.
+This is a MacOS client, connecting to the VPN server `34.216.127.34` on port `1959`. The port number is optional here as well. And the IP can be replaced by a host name.
 
 ## That's it
 
@@ -91,7 +91,7 @@ Or send a pull request implementing the required commands to change and revert t
 ```text
 dsvpn   "server"
         <key file>
-        <vpn server ip>|"auto"
+        <vpn server ip or name>|"auto"
         <vpn server port>|"auto"
         <tun interface>|"auto"
         <local tun ip>|"auto"
@@ -100,7 +100,7 @@ dsvpn   "server"
 
 dsvpn   "client"
         <key file>
-        <vpn server ip>
+        <vpn server ip or name>
         <vpn server port>|"auto"
         <tun interface>|"auto"
         <local tun ip>|"auto"
@@ -110,7 +110,7 @@ dsvpn   "client"
 
 * `server`|`client`: use `server` on the server, and `client` on clients.
 * `<key file>`: path to the file with the secret key (e.g. `vpn.key`).
-* `<vpn server ip>`: on the client, it should be the IP address or the hostname of the server. On the server, it doesn't matter, so you can just use `auto`.
+* `<vpn server ip or name>`: on the client, it should be the IP address or the hostname of the server. On the server, it doesn't matter, so you can just use `auto`.
 * `<vpn server port>`: the TCP port to listen to/connect to for the VPN. Use 443 or anything else. `auto` will use `443`.
 * `<tun interface>`: this is the name of the VPN interface. On Linux, you can set it to anything. Or MacOS, it has to follow a more boring pattern. If you feel lazy, just use `auto` here.
 * `<local tun ip>`: local IP address of the tunnel. Use any private IP address that you don't use here.
