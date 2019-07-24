@@ -15,16 +15,17 @@ typedef struct __attribute__((aligned(16))) Buf_ {
 } Buf;
 
 typedef struct Context_ {
-    const char *  wanted_name;
+    const char *  wanted_if_name;
     const char *  local_tun_ip;
     const char *  remote_tun_ip;
     const char *  local_tun_ip6;
     const char *  remote_tun_ip6;
-    const char *  server_ip;
+    const char *  server_ip_or_name;
     const char *  server_port;
     const char *  ext_if_name;
     const char *  wanted_ext_gw_ip;
     char          ext_gw_ip[64];
+    char          server_ip[64];
     char          if_name[IFNAMSIZ];
     int           is_server;
     int           tun_fd;
@@ -88,17 +89,12 @@ static int tcp_client(const char *address, const char *port)
     int             client_fd;
     int             err;
 
+    printf("Connecting to %s:%s...\n", address, port);
     memset(&hints, 0, sizeof hints);
     hints.ai_flags    = 0;
     hints.ai_family   = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_addr     = NULL;
-#ifdef __OpenBSD__
-    if (address == NULL) {
-        hints.ai_family = AF_INET;
-    }
-#endif
-    printf("Connecting to %s:%s...\n", address, port);
     if ((eai = getaddrinfo(address, port, &hints, &res)) != 0 ||
         (res->ai_family != AF_INET && res->ai_family != AF_INET6)) {
         fprintf(stderr, "Unable to create the client socket: [%s]\n", gai_strerror(eai));
@@ -474,7 +470,8 @@ static int doit(Context *context)
     context->fds[POLLFD_TUN] =
         (struct pollfd){ .fd = context->tun_fd, .events = POLLIN, .revents = 0 };
     if (context->is_server) {
-        if ((context->listen_fd = tcp_listener(context->server_ip, context->server_port)) == -1) {
+        if ((context->listen_fd = tcp_listener(context->server_ip_or_name, context->server_port)) ==
+            -1) {
             perror("Unable to set up a TCP server");
             return -1;
         }
@@ -515,11 +512,11 @@ static void usage(void)
     puts(
         "Usage:\n"
         "\n"
-        "dsvpn\t\"server\"\n\t<key file>\n\t<vpn server ip>|\"auto\"\n\t<vpn "
+        "dsvpn\t\"server\"\n\t<key file>\n\t<vpn server ip or name>|\"auto\"\n\t<vpn "
         "server port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun "
         "ip>|\"auto\"\n\t<remote tun ip>\"auto\"\n\t<external ip>|\"auto\""
         "\n\n"
-        "dsvpn\t\"client\"\n\t<key file>\n\t<vpn server ip>\n\t<vpn server "
+        "dsvpn\t\"client\"\n\t<key file>\n\t<vpn server ip or name>\n\t<vpn server "
         "port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun "
         "ip>|\"auto\"\n\t<remote tun ip>|\"auto\"\n\t<gateway ip>\"auto\"\n");
     exit(254);
@@ -533,6 +530,26 @@ static void get_tun6_addresses(Context *context)
     snprintf(remote_tun_ip6, sizeof remote_tun_ip6, "64:ff9b::%s", context->remote_tun_ip);
     context->local_tun_ip6  = local_tun_ip6;
     context->remote_tun_ip6 = remote_tun_ip6;
+}
+
+static int resolve_ip(char *ip, size_t sizeof_ip, const char *ip_or_name)
+{
+    struct addrinfo hints, *res;
+    int             eai;
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_flags    = 0;
+    hints.ai_family   = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_addr     = NULL;
+    if ((eai = getaddrinfo(ip_or_name, NULL, &hints, &res)) != 0 ||
+        (res->ai_family != AF_INET && res->ai_family != AF_INET6) ||
+        (eai = getnameinfo(res->ai_addr, res->ai_addrlen, ip, sizeof_ip, NULL, 0,
+                           NI_NUMERICHOST | NI_NUMERICSERV)) != 0) {
+        fprintf(stderr, "Unable to resolve [%s]: [%s]\n", ip_or_name, gai_strerror(eai));
+        return -1;
+    }
+    return 0;
 }
 
 int main(int argc, char *argv[])
@@ -549,13 +566,17 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Unable to load the key file [%s]\n", argv[2]);
         return 1;
     }
-    context.server_ip = (argc <= 3 || strcmp(argv[3], "auto") == 0) ? NULL : argv[3];
-    if (context.server_ip == NULL && !context.is_server) {
+    context.server_ip_or_name = (argc <= 3 || strcmp(argv[3], "auto") == 0) ? NULL : argv[3];
+    if (context.server_ip_or_name == NULL && !context.is_server) {
         usage();
     }
-    context.server_port  = (argc <= 4 || strcmp(argv[4], "auto") == 0) ? DEFAULT_PORT : argv[4];
-    context.wanted_name  = (argc <= 5 || strcmp(argv[5], "auto") == 0) ? NULL : argv[5];
-    context.local_tun_ip = (argc <= 6 || strcmp(argv[6], "auto") == 0)
+    if (context.server_ip_or_name != NULL &&
+        resolve_ip(context.server_ip, sizeof context.server_ip, context.server_ip_or_name) != 0) {
+        return 1;
+    }
+    context.server_port    = (argc <= 4 || strcmp(argv[4], "auto") == 0) ? DEFAULT_PORT : argv[4];
+    context.wanted_if_name = (argc <= 5 || strcmp(argv[5], "auto") == 0) ? NULL : argv[5];
+    context.local_tun_ip   = (argc <= 6 || strcmp(argv[6], "auto") == 0)
                                ? (context.is_server ? DEFAULT_SERVER_IP : DEFAULT_CLIENT_IP)
                                : argv[6];
     context.remote_tun_ip = (argc <= 7 || strcmp(argv[7], "auto") == 0)
@@ -573,7 +594,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     get_tun6_addresses(&context);
-    context.tun_fd = tun_create(context.if_name, context.wanted_name);
+    context.tun_fd = tun_create(context.if_name, context.wanted_if_name);
     if (context.tun_fd == -1) {
         perror("tun device creation");
         return 1;
