@@ -377,6 +377,7 @@ static int event_loop(Context *context)
         }
         if (context->client_fd != -1) {
             (void) close(context->client_fd);
+            sleep(1);
         }
         context->client_fd = new_client_fd;
         client_buf->pos    = 0;
