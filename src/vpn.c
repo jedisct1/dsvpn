@@ -501,8 +501,8 @@ static int load_key_file(Context *context, const char *file)
         return -1;
     }
     if (safe_read(fd, key, sizeof key, -1) != sizeof key) {
+        (void) close(fd);
         return -1;
-        memset(key, 0, sizeof key);
     }
     uc_state_init(context->uc_kx_st, key, (const unsigned char *) "VPN Key Exchange");
     uc_memzero(key, sizeof key);
