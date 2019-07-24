@@ -232,6 +232,7 @@ static int server_key_exchange(Context *context, const int client_fd)
 
 static int tcp_accept(Context *context, int listen_fd)
 {
+    char                    client_ip[NI_MAXHOST];
     struct sockaddr_storage client_sa;
     socklen_t               client_sa_len = sizeof client_sa;
     int                     client_fd;
@@ -251,6 +252,9 @@ static int tcp_accept(Context *context, int listen_fd)
         errno = err;
         return -1;
     }
+    getnameinfo((const struct sockaddr *) (const void *) &client_sa, client_sa_len, client_ip,
+                sizeof client_ip, NULL, 0, NI_NUMERICHOST | NI_NUMERICSERV);
+    printf("Accepting new client from [%s]\n", client_ip);
     context->congestion = 0;
     fcntl(client_fd, F_SETFL, fcntl(client_fd, F_GETFL, 0) | O_NONBLOCK);
     if (server_key_exchange(context, client_fd) != 0) {
@@ -366,7 +370,6 @@ static int event_loop(Context *context)
         return -1;
     }
     if (fds[POLLFD_LISTENER].revents & POLLIN) {
-        puts("Accepting new client");
         new_client_fd = tcp_accept(context, context->listen_fd);
         if (new_client_fd == -1) {
             perror("tcp_accept");
