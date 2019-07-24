@@ -405,6 +405,7 @@ int shell_cmd(const char *substs[][2], const char *args_str)
     if ((child = vfork()) == (pid_t) -1) {
         return -1;
     } else if (child == (pid_t) 0) {
+        dup2(open("/dev/null", O_WRONLY), 2);
         execvp(args[0], args);
         _exit(1);
     } else if (waitpid(child, &exit_status, 0) == (pid_t) -1 || !WIFEXITED(exit_status)) {
