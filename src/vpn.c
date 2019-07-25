@@ -509,16 +509,16 @@ static int load_key_file(Context *context, const char *file)
 
 static void usage(void)
 {
-    puts(
-        "DSVPN " VERSION_STRING " usage:\n"
-        "\n"
-        "dsvpn\t\"server\"\n\t<key file>\n\t<vpn server ip or name>|\"auto\"\n\t<vpn "
-        "server port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun "
-        "ip>|\"auto\"\n\t<remote tun ip>\"auto\"\n\t<external ip>|\"auto\""
-        "\n\n"
-        "dsvpn\t\"client\"\n\t<key file>\n\t<vpn server ip or name>\n\t<vpn server "
-        "port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun "
-        "ip>|\"auto\"\n\t<remote tun ip>|\"auto\"\n\t<gateway ip>\"auto\"\n");
+    puts("DSVPN " VERSION_STRING
+         " usage:\n"
+         "\n"
+         "dsvpn\t\"server\"\n\t<key file>\n\t<vpn server ip or name>|\"auto\"\n\t<vpn "
+         "server port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun "
+         "ip>|\"auto\"\n\t<remote tun ip>\"auto\"\n\t<external ip>|\"auto\""
+         "\n\n"
+         "dsvpn\t\"client\"\n\t<key file>\n\t<vpn server ip or name>\n\t<vpn server "
+         "port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun "
+         "ip>|\"auto\"\n\t<remote tun ip>|\"auto\"\n\t<gateway ip>\"auto\"\n");
     exit(254);
 }
 
@@ -607,6 +607,10 @@ int main(int argc, char *argv[])
         if (firewall_rules(&context, 1) != 0) {
             return -1;
         }
+#ifdef __OpenBSD__
+        printf("\mAdd the following rule to /etc/pf.conf:\npass out from %s nat-to egress\n\n",
+               context.remote_tun_ip);
+#endif
     } else {
         firewall_rules(&context, 0);
     }
