@@ -13,7 +13,7 @@ Features:
 * Low and constant memory footprint. Doesn't perform any heap memory allocations.
 * Small (~25 KB), with an equally small and readable code base. No external dependencies.
 * Works out of the box. No lousy documentation to read. No configuration file. No post-configuration. Run a single-line command on the server, a similar one on the client and you're done. No firewall and routing rules to manually mess with.
-* Works with Linux (client, server) and MacOS/OpenBSD (client). Adding support for other operating systems is trivial.
+* Works with Linux, MacOS and OpenBSD. Adding support for other operating systems is trivial.
 * Doesn't leak between reconnects if the network doesn't change. Blocks IPv6 on the client to prevent IPv6 leaks.
 
 Next:
