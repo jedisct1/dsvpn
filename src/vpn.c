@@ -507,7 +507,7 @@ static int load_key_file(Context *context, const char *file)
     return close(fd);
 }
 
-static void usage(void)
+__attribute__((noreturn)) static void usage(void)
 {
     puts("DSVPN " VERSION_STRING
          " usage:\n"

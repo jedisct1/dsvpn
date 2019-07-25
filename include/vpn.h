@@ -65,4 +65,6 @@
 #define endian_swap64(x) (x)
 #endif
 
+extern volatile sig_atomic_t exit_signal_received;
+
 #endif
