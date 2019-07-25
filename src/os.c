@@ -456,6 +456,13 @@ Cmds firewall_rules_cmds(int is_server)
        "RELATED,ESTABLISHED -j ACCEPT",
        "iptables -t filter -D FORWARD -i $IF_NAME -o $EXT_IF_NAME -j ACCEPT", NULL
    };
+#elif defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
+        static const char *set_cmds
+            []   = { "sysctl -w net.inet.ip.forwarding=1",
+                   "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
+                   "ifconfig $IF_NAME inet6 $LOCAL_TUN_IP6 $REMOTE_TUN_IP6 prefixlen 128 up",
+                   NULL },
+   *unset_cmds[] = { NULL, NULL };
 #else
         static const char *const *set_cmds = NULL, *const *unset_cmds = NULL;
 #endif
