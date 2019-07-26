@@ -46,6 +46,8 @@ On Raspberry Pi 3 and 4, use the following command instead to enable NEON optimi
 env OPTFLAGS=-mfpu=neon make
 ```
 
+On MacOS, it can be installed using Homebrew: `brew install nnathan/dsvpn/dsvpn`.
+
 ## Secret key
 
 DSVPN uses a shared secret. Create it with the following command:
