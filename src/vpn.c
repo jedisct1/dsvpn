@@ -608,7 +608,7 @@ int main(int argc, char *argv[])
             return -1;
         }
 #ifdef __OpenBSD__
-        printf("Add the following rule to /etc/pf.conf:\npass out from %s nat-to egress\n\n",
+        printf("\nAdd the following rule to /etc/pf.conf:\npass out from %s nat-to egress\n\n",
                context.remote_tun_ip);
 #endif
     } else {
