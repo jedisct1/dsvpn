@@ -333,7 +333,10 @@ const char *get_default_ext_if_name(void)
 #elif defined(__linux__)
     return read_from_shell_command(if_name, sizeof if_name,
                                    "ip route show default 2>/dev/null|awk '/default/{print $5}'");
-#elif defined(__OpenBSD__) || defined(__FreeBSD__)
+#elif defined(__FreeBSD__)
+    return read_from_shell_command(if_name, sizeof if_name,
+                                   "route get default | awk '$1 == \"interface:\" {print $2}'");
+#elif defined(__OpenBSD__)
     return read_from_shell_command(if_name, sizeof if_name,
                                    "netstat -rn|awk '/^default/{print $8}'");
 #else
