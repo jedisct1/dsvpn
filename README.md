@@ -40,11 +40,12 @@ Never ever:
 make
 ```
 
-On Raspberry Pi 3 and 4, use the following command instead to enable NEON optimizations:
+On RaspberryPi 2, 3 and 4, use the following command instead to enable NEON optimizations:
 
 ```sh
 env OPTFLAGS=-mfpu=neon make
 ```
+RaspberryPi Zero and 1: `-mfpu=vfpv2`.
 
 On MacOS, it can be installed using Homebrew: `brew install nnathan/dsvpn/dsvpn`.
 
