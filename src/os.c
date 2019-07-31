@@ -152,7 +152,7 @@ int tun_create(char if_name[IFNAMSIZ], const char *wanted_name)
     }
     return tun_create_by_id(if_name, id);
 }
-#elif defined(__OpenBSD__)
+#elif defined(__OpenBSD__) || defined(__FreeBSD__)
 int tun_create(char if_name[IFNAMSIZ], const char *wanted_name)
 {
     char         path[64];
