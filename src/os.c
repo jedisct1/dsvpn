@@ -312,7 +312,7 @@ const char *get_default_gw_ip(void)
     static char gw[64];
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)
     return read_from_shell_command(
-        gw, sizeof gw, "route -n get default 2>/dev/null|awk '/gateway:/{print $2}'|head -n1");
+        gw, sizeof gw, "route -n get default 2>/dev/null|awk '/gateway:/{print $2;exit}'");
 #elif defined(__linux__)
     return read_from_shell_command(gw, sizeof gw,
                                    "ip route show default 2>/dev/null|awk '/default/{print $3}'");
@@ -327,7 +327,7 @@ const char *get_default_ext_if_name(void)
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)
     return read_from_shell_command(if_name, sizeof if_name,
                                    "route -n get default 2>/dev/null|awk "
-                                   "'/interface:/{print $2}'|head -n1");
+                                   "'/interface:/{print $2;exit}'");
 #elif defined(__linux__)
     return read_from_shell_command(if_name, sizeof if_name,
                                    "ip route show default 2>/dev/null|awk '/default/{print $5}'");
