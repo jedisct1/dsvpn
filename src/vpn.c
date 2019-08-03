@@ -47,7 +47,7 @@ static void signal_handler(int sig)
     exit_signal_received = 1;
 }
 
-static int firewall_rules(Context *context, int set)
+static int firewall_rules(Context *context, int set, int silent)
 {
     const char *       substs[][2] = { { "$LOCAL_TUN_IP6", context->local_tun_ip6 },
                                 { "$REMOTE_TUN_IP6", context->remote_tun_ip6 },
@@ -73,7 +73,7 @@ static int firewall_rules(Context *context, int set)
         return 0;
     }
     for (i = 0; cmds[i] != NULL; i++) {
-        if (shell_cmd(substs, cmds[i]) != 0) {
+        if (shell_cmd(substs, cmds[i], silent) != 0) {
             fprintf(stderr, "Unable to run [%s]: [%s]\n", cmds[i], strerror(errno));
             return -1;
         }
@@ -305,9 +305,9 @@ static int client_connect(Context *context)
     if (context->wanted_ext_gw_ip == NULL && (ext_gw_ip = get_default_gw_ip()) != NULL &&
         strcmp(ext_gw_ip, context->ext_gw_ip) != 0) {
         printf("Gateway changed from [%s] to [%s]\n", context->ext_gw_ip, ext_gw_ip);
-        firewall_rules(context, 0);
+        firewall_rules(context, 0, 0);
         snprintf(context->ext_gw_ip, sizeof context->ext_gw_ip, "%s", ext_gw_ip);
-        firewall_rules(context, 1);
+        firewall_rules(context, 1, 0);
     }
     memset(context->uc_st, 0, sizeof context->uc_st);
     context->uc_st[context->is_server][0] ^= 1;
@@ -324,7 +324,7 @@ static int client_connect(Context *context)
         sleep(1);
         return -1;
     }
-    firewall_rules(context, 1);
+    firewall_rules(context, 1, 0);
     context->fds[POLLFD_CLIENT] =
         (struct pollfd){ .fd = context->client_fd, .events = POLLIN, .revents = 0 };
     puts("Connected");
@@ -604,7 +604,7 @@ int main(int argc, char *argv[])
 #endif
     context.firewall_rules_set = -1;
     if (context.is_server) {
-        if (firewall_rules(&context, 1) != 0) {
+        if (firewall_rules(&context, 1, 0) != 0) {
             return -1;
         }
 #ifdef __OpenBSD__
@@ -612,7 +612,7 @@ int main(int argc, char *argv[])
                context.remote_tun_ip);
 #endif
     } else {
-        firewall_rules(&context, 0);
+        firewall_rules(&context, 0, 1);
     }
     if (context.server_ip_or_name != NULL &&
         resolve_ip(context.server_ip, sizeof context.server_ip, context.server_ip_or_name) != 0) {
@@ -623,7 +623,7 @@ int main(int argc, char *argv[])
     if (doit(&context) != 0) {
         return -1;
     }
-    firewall_rules(&context, 0);
+    firewall_rules(&context, 0, 0);
     puts("Done.");
 
     return 0;
