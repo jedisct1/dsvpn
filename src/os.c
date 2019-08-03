@@ -152,7 +152,7 @@ int tun_create(char if_name[IFNAMSIZ], const char *wanted_name)
     }
     return tun_create_by_id(if_name, id);
 }
-#elif defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__DragonFly__)
+#elif defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__DragonFly__) || defined(__NetBSD__)
 int tun_create(char if_name[IFNAMSIZ], const char *wanted_name)
 {
     char         path[64];
@@ -310,7 +310,8 @@ static char *read_from_shell_command(char *result, size_t sizeof_result, const c
 const char *get_default_gw_ip(void)
 {
     static char gw[64];
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || \
+    defined(__DragonFly__) || defined(__NetBSD__)
     return read_from_shell_command(
         gw, sizeof gw, "route -n get default 2>/dev/null|awk '/gateway:/{print $2;exit}'");
 #elif defined(__linux__)
@@ -324,7 +325,8 @@ const char *get_default_gw_ip(void)
 const char *get_default_ext_if_name(void)
 {
     static char if_name[64];
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || \
+    defined(__DragonFly__) || defined(__NetBSD__)
     return read_from_shell_command(if_name, sizeof if_name,
                                    "route -n get default 2>/dev/null|awk "
                                    "'/interface:/{print $2;exit}'");
@@ -452,7 +454,8 @@ Cmds firewall_rules_cmds(int is_server)
        "RELATED,ESTABLISHED -j ACCEPT",
        "iptables -t filter -D FORWARD -i $IF_NAME -o $EXT_IF_NAME -j ACCEPT", NULL
    };
-#elif defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__DragonFly__)
+#elif defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__) || \
+    defined(__DragonFly__) || defined(__NetBSD__)
         static const char *set_cmds
             []   = { "sysctl -w net.inet.ip.forwarding=1",
                    "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
@@ -464,7 +467,8 @@ Cmds firewall_rules_cmds(int is_server)
 #endif
         return (Cmds){ set_cmds, unset_cmds };
     } else {
-#if defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__DragonFly__)
+#if defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__) || \
+    defined(__DragonFly__) || defined(__NetBSD__)
         static const char *set_cmds
             []   = { "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
                    "ifconfig $IF_NAME inet6 $LOCAL_TUN_IP6 $REMOTE_TUN_IP6 prefixlen 128 up",
@@ -474,8 +478,12 @@ Cmds firewall_rules_cmds(int is_server)
                    "route add -inet6 -blackhole 0000::/1 $REMOTE_TUN_IP6",
                    "route add -inet6 -blackhole 8000::/1 $REMOTE_TUN_IP6",
                    NULL },
-   *unset_cmds[] = { "route delete $EXT_IP $EXT_GW_IP", "route delete -inet6 0000::/1",
-                     "route delete -inet6 8000::/1", NULL };
+   *unset_cmds[] = { "route delete $EXT_IP $EXT_GW_IP",
+                     "route delete 0/1",
+                     "route delete 128/1",
+                     "route delete -inet6 0000::/1",
+                     "route delete -inet6 8000::/1",
+                     NULL };
 #elif defined(__linux__)
         static const char
             *set_cmds[]   = { "sysctl net.ipv4.tcp_congestion_control=bbr",
