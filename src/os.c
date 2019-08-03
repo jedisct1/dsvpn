@@ -209,7 +209,7 @@ int tun_set_mtu(const char *if_name, int mtu)
     return close(fd);
 }
 
-#if defined(__linux__) || defined(__DragonFly__)
+#if !defined(__APPLE__) && !defined(__OpenBSD__)
 ssize_t tun_read(int fd, void *data, size_t size)
 {
     return safe_read_partial(fd, data, size);
@@ -219,7 +219,7 @@ ssize_t tun_write(int fd, const void *data, size_t size)
 {
     return safe_write(fd, data, size, TIMEOUT);
 }
-#elif defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__)
+#else
 ssize_t tun_read(int fd, void *data, size_t size)
 {
     ssize_t  ret;
