@@ -35,7 +35,7 @@
 #include <sys/sys_domain.h>
 #endif
 
-#define VERSION_STRING "0.1.1"
+#define VERSION_STRING "0.1.2"
 
 #ifdef __NetBSD__
 #define DEFAULT_MTU 1500
