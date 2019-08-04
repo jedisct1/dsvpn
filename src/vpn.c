@@ -101,11 +101,8 @@ static int tcp_client(const char *address, const char *port)
         errno = EINVAL;
         return -1;
     }
-    if ((client_fd = socket(res->ai_family, SOCK_STREAM, IPPROTO_TCP)) == -1) {
-        freeaddrinfo(res);
-        return -1;
-    }
-    if (tcp_opts(client_fd) != 0 ||
+    if ((client_fd = socket(res->ai_family, SOCK_STREAM, IPPROTO_TCP)) == -1 ||
+        tcp_opts(client_fd) != 0 ||
         connect(client_fd, (const struct sockaddr *) res->ai_addr, res->ai_addrlen) != 0) {
         freeaddrinfo(res);
         err = errno;
@@ -120,7 +117,7 @@ static int tcp_client(const char *address, const char *port)
 static int tcp_listener(const char *address, const char *port)
 {
     struct addrinfo hints, *res;
-    int             eai;
+    int             eai, err;
     int             listen_fd;
     int             backlog = 1;
 
@@ -142,7 +139,10 @@ static int tcp_listener(const char *address, const char *port)
     }
     if ((listen_fd = socket(res->ai_family, SOCK_STREAM, IPPROTO_TCP)) == -1 ||
         setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, (char *) (int[]){ 1 }, sizeof(int)) != 0) {
+        err = errno;
+        (void) close(listen_fd);
         freeaddrinfo(res);
+        errno = err;
         return -1;
     }
 #if defined(IPPROTO_IPV6) && defined(IPV6_V6ONLY)
