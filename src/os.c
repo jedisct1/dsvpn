@@ -356,6 +356,10 @@ int tcp_opts(int fd)
     (void) setsockopt(fd, IPPROTO_TCP, TCP_NOTSENT_LOWAT,
                       (char *) (unsigned int[]){ NOTSENT_LOWAT }, sizeof(unsigned int));
 #endif
+#ifdef TCP_USER_TIMEOUT
+    (void) setsockopt(fd, IPPROTO_TCP, TCP_USER_TIMEOUT, (char *) (unsigned int[]){ TIMEOUT },
+                      sizeof(unsigned int));
+#endif
 #ifdef SO_MARK
     (void) setsockopt(fd, SOL_SOCKET, SO_MARK, (char *) (unsigned int[]){ 42069U },
                       sizeof(unsigned int));
