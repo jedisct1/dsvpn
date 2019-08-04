@@ -105,7 +105,8 @@ static int tcp_client(const char *address, const char *port)
         freeaddrinfo(res);
         return -1;
     }
-    if (connect(client_fd, (const struct sockaddr *) res->ai_addr, res->ai_addrlen) != 0) {
+    if (tcp_opts(client_fd) != 0 ||
+        connect(client_fd, (const struct sockaddr *) res->ai_addr, res->ai_addrlen) != 0) {
         freeaddrinfo(res);
         err = errno;
         (void) close(client_fd);
@@ -113,12 +114,6 @@ static int tcp_client(const char *address, const char *port)
         return -1;
     }
     freeaddrinfo(res);
-    if (tcp_opts(client_fd) != 0) {
-        err = errno;
-        (void) close(client_fd);
-        errno = err;
-        return -1;
-    }
     return client_fd;
 }
 
