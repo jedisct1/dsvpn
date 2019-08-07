@@ -295,7 +295,7 @@ static char *read_from_shell_command(char *result, size_t sizeof_result, const c
         return NULL;
     }
     if (fgets(result, sizeof_result, fp) == NULL) {
-        fclose(fp);
+        pclose(fp);
         fprintf(stderr, "Command [%s] failed]\n", command);
         return NULL;
     }
