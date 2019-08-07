@@ -598,6 +598,11 @@ int main(int argc, char *argv[])
     pledge("stdio proc exec dns inet", NULL);
 #endif
     context.firewall_rules_set = -1;
+    if (context.server_ip_or_name != NULL &&
+        resolve_ip(context.server_ip, sizeof context.server_ip, context.server_ip_or_name) != 0) {
+        firewall_rules(&context, 0, 1);
+        return 1;
+    }
     if (context.is_server) {
         if (firewall_rules(&context, 1, 0) != 0) {
             return -1;
@@ -608,10 +613,6 @@ int main(int argc, char *argv[])
 #endif
     } else {
         firewall_rules(&context, 0, 1);
-    }
-    if (context.server_ip_or_name != NULL &&
-        resolve_ip(context.server_ip, sizeof context.server_ip, context.server_ip_or_name) != 0) {
-        return 1;
     }
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
