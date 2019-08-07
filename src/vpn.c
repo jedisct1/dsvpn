@@ -358,7 +358,7 @@ static int event_loop(Context *context)
         return -2;
     }
     if ((found_fds = poll(fds, POLLFD_COUNT, 1500)) == -1) {
-        return -1;
+        return errno == EINTR ? 0 : -1;
     }
     if (fds[POLLFD_LISTENER].revents & POLLIN) {
         new_client_fd = tcp_accept(context, context->listen_fd);
