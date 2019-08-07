@@ -482,12 +482,11 @@ Cmds firewall_rules_cmds(int is_server)
               "route add -inet6 -blackhole 0000::/1 $REMOTE_TUN_IP6",
               "route add -inet6 -blackhole 8000::/1 $REMOTE_TUN_IP6",
               NULL },
-                          *unset_cmds[] = { "route delete $EXT_IP $EXT_GW_IP",
-                                            "route delete 0/1",
-                                            "route delete 128/1",
-                                            "route delete -inet6 0000::/1",
-                                            "route delete -inet6 8000::/1",
-                                            NULL };
+                          *unset_cmds[] = {
+                              "route delete $EXT_IP",         "route delete 0/1",
+                              "route delete 128/1",           "route delete -inet6 0000::/1",
+                              "route delete -inet6 8000::/1", NULL
+                          };
 #elif defined(__linux__)
         static const char
             *set_cmds[]   = { "sysctl net.ipv4.tcp_congestion_control=bbr",
