@@ -442,30 +442,30 @@ Cmds firewall_rules_cmds(int is_server)
 {
     if (is_server) {
 #ifdef __linux__
-        static const char *set_cmds
-            []   = { "sysctl net.ipv4.ip_forward=1",
-                   "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
-                   "ip -6 addr add $LOCAL_TUN_IP6 peer $REMOTE_TUN_IP6/96 dev $IF_NAME",
-                   "ip link set dev $IF_NAME up",
-                   "iptables -t nat -A POSTROUTING -o $EXT_IF_NAME -s $REMOTE_TUN_IP -j MASQUERADE",
-                   "iptables -t filter -A FORWARD -i $EXT_IF_NAME -o $IF_NAME -m state --state "
-                   "RELATED,ESTABLISHED -j ACCEPT",
-                   "iptables -t filter -A FORWARD -i $IF_NAME -o $EXT_IF_NAME -j ACCEPT",
-                   NULL },
-   *unset_cmds[] = {
-       "iptables -t nat -D POSTROUTING -o $EXT_IF_NAME -s $REMOTE_TUN_IP -j MASQUERADE",
-       "iptables -t filter -D FORWARD -i $EXT_IF_NAME -o $IF_NAME -m state --state "
-       "RELATED,ESTABLISHED -j ACCEPT",
-       "iptables -t filter -D FORWARD -i $IF_NAME -o $EXT_IF_NAME -j ACCEPT", NULL
-   };
+        static const char
+            *set_cmds[] =
+                { "sysctl net.ipv4.ip_forward=1",
+                  "ip addr add $LOCAL_TUN_IP peer $REMOTE_TUN_IP dev $IF_NAME",
+                  "ip -6 addr add $LOCAL_TUN_IP6 peer $REMOTE_TUN_IP6/96 dev $IF_NAME",
+                  "ip link set dev $IF_NAME up",
+                  "iptables -t nat -A POSTROUTING -o $EXT_IF_NAME -s $REMOTE_TUN_IP -j MASQUERADE",
+                  "iptables -t filter -A FORWARD -i $EXT_IF_NAME -o $IF_NAME -m state --state "
+                  "RELATED,ESTABLISHED -j ACCEPT",
+                  "iptables -t filter -A FORWARD -i $IF_NAME -o $EXT_IF_NAME -j ACCEPT",
+                  NULL },
+            *unset_cmds[] = {
+                "iptables -t nat -D POSTROUTING -o $EXT_IF_NAME -s $REMOTE_TUN_IP -j MASQUERADE",
+                "iptables -t filter -D FORWARD -i $EXT_IF_NAME -o $IF_NAME -m state --state "
+                "RELATED,ESTABLISHED -j ACCEPT",
+                "iptables -t filter -D FORWARD -i $IF_NAME -o $EXT_IF_NAME -j ACCEPT", NULL
+            };
 #elif defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__) || \
     defined(__DragonFly__) || defined(__NetBSD__)
-        static const char *set_cmds
-            []   = { "sysctl -w net.inet.ip.forwarding=1",
-                   "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
-                   "ifconfig $IF_NAME inet6 $LOCAL_TUN_IP6 $REMOTE_TUN_IP6 prefixlen 128 up",
-                   NULL },
-   *unset_cmds[] = { NULL, NULL };
+        static const char *set_cmds[] =
+            { "sysctl -w net.inet.ip.forwarding=1",
+              "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
+              "ifconfig $IF_NAME inet6 $LOCAL_TUN_IP6 $REMOTE_TUN_IP6 prefixlen 128 up", NULL },
+                          *unset_cmds[] = { NULL, NULL };
 #else
         static const char *const *set_cmds = NULL, *const *unset_cmds = NULL;
 #endif
@@ -473,21 +473,21 @@ Cmds firewall_rules_cmds(int is_server)
     } else {
 #if defined(__APPLE__) || defined(__OpenBSD__) || defined(__FreeBSD__) || \
     defined(__DragonFly__) || defined(__NetBSD__)
-        static const char *set_cmds
-            []   = { "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
-                   "ifconfig $IF_NAME inet6 $LOCAL_TUN_IP6 $REMOTE_TUN_IP6 prefixlen 128 up",
-                   "route add $EXT_IP $EXT_GW_IP",
-                   "route add 0/1 $REMOTE_TUN_IP",
-                   "route add 128/1 $REMOTE_TUN_IP",
-                   "route add -inet6 -blackhole 0000::/1 $REMOTE_TUN_IP6",
-                   "route add -inet6 -blackhole 8000::/1 $REMOTE_TUN_IP6",
-                   NULL },
-   *unset_cmds[] = { "route delete $EXT_IP $EXT_GW_IP",
-                     "route delete 0/1",
-                     "route delete 128/1",
-                     "route delete -inet6 0000::/1",
-                     "route delete -inet6 8000::/1",
-                     NULL };
+        static const char *set_cmds[] =
+            { "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
+              "ifconfig $IF_NAME inet6 $LOCAL_TUN_IP6 $REMOTE_TUN_IP6 prefixlen 128 up",
+              "route add $EXT_IP $EXT_GW_IP",
+              "route add 0/1 $REMOTE_TUN_IP",
+              "route add 128/1 $REMOTE_TUN_IP",
+              "route add -inet6 -blackhole 0000::/1 $REMOTE_TUN_IP6",
+              "route add -inet6 -blackhole 8000::/1 $REMOTE_TUN_IP6",
+              NULL },
+                          *unset_cmds[] = { "route delete $EXT_IP $EXT_GW_IP",
+                                            "route delete 0/1",
+                                            "route delete 128/1",
+                                            "route delete -inet6 0000::/1",
+                                            "route delete -inet6 8000::/1",
+                                            NULL };
 #elif defined(__linux__)
         static const char
             *set_cmds[]   = { "sysctl net.ipv4.tcp_congestion_control=bbr",
