@@ -294,7 +294,7 @@ static char *read_from_shell_command(char *result, size_t sizeof_result, const c
     if ((fp = popen(command, "r")) == NULL) {
         return NULL;
     }
-    if (fgets(result, sizeof_result, fp) == NULL) {
+    if (fgets(result, (int) sizeof_result, fp) == NULL) {
         pclose(fp);
         fprintf(stderr, "Command [%s] failed]\n", command);
         return NULL;
@@ -432,7 +432,7 @@ int shell_cmd(const char *substs[][2], const char *args_str, int silent)
         }
         execvp(args[0], args);
         _exit(1);
-    } else if (waitpid(child, &exit_status, 0) == (pid_t) -1 || !WIFEXITED(exit_status)) {
+    } else if (waitpid(child, &exit_status, WNOHANG) == (pid_t) -1 || !WIFEXITED(exit_status)) {
         return -1;
     }
     return 0;

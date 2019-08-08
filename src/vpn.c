@@ -539,7 +539,7 @@ static int resolve_ip(char *ip, size_t sizeof_ip, const char *ip_or_name)
     hints.ai_addr     = NULL;
     if ((eai = getaddrinfo(ip_or_name, NULL, &hints, &res)) != 0 ||
         (res->ai_family != AF_INET && res->ai_family != AF_INET6) ||
-        (eai = getnameinfo(res->ai_addr, res->ai_addrlen, ip, sizeof_ip, NULL, 0,
+        (eai = getnameinfo(res->ai_addr, res->ai_addrlen, ip, (socklen_t) sizeof_ip, NULL, 0,
                            NI_NUMERICHOST | NI_NUMERICSERV)) != 0) {
         fprintf(stderr, "Unable to resolve [%s]: [%s]\n", ip_or_name, gai_strerror(eai));
         return -1;
