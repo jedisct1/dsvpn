@@ -424,7 +424,7 @@ int shell_cmd(const char *substs[][2], const char *args_str, int silent)
         return -1;
     }
     args[args_i] = NULL;
-    if ((child = vfork()) == (pid_t) -1) {
+    if ((child = fork()) == (pid_t) -1) {
         return -1;
     } else if (child == (pid_t) 0) {
         if (silent) {
