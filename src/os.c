@@ -432,7 +432,7 @@ int shell_cmd(const char *substs[][2], const char *args_str, int silent)
         }
         execvp(args[0], args);
         _exit(1);
-    } else if (waitpid(child, &exit_status, WNOHANG|WUNTRACED) == (pid_t) -1 || !WIFEXITED(exit_status)) {
+    } else if (waitpid(child, &exit_status, WNOHANG) == (pid_t) -1 || !WIFEXITED(exit_status)) {
         return -1;
     }
     return 0;
@@ -476,7 +476,7 @@ Cmds firewall_rules_cmds(int is_server)
         static const char *set_cmds[] =
             { "ifconfig $IF_NAME $LOCAL_TUN_IP $REMOTE_TUN_IP up",
               "ifconfig $IF_NAME inet6 $LOCAL_TUN_IP6 $REMOTE_TUN_IP6 prefixlen 128 up",
-              "route add $EXT_IP/32 $EXT_GW_IP",
+              "route add $EXT_IP $EXT_GW_IP",
               "route add 0/1 $REMOTE_TUN_IP",
               "route add 128/1 $REMOTE_TUN_IP",
               "route add -inet6 -blackhole 0000::/1 $REMOTE_TUN_IP6",
