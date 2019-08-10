@@ -58,6 +58,13 @@ dd if=/dev/urandom of=vpn.key count=1 bs=32
 
 And copy it on the server and the client.
 
+If required, keys can be exported and imported in printable form:
+
+```sh
+base64 < vpn.key
+echo 'HK940OkWcFqSmZXnCQ1w6jhQMZm0fZoEhQOOpzJ/l3w=' | base64 -d > vpn.key
+```
+
 ## Example usage on the server
 
 ```sh
