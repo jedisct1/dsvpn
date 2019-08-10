@@ -122,6 +122,11 @@ dsvpn   "client"
 
 If all the remaining parameters of a command would be `auto`, they don't have to be specified.
 
+## Related projects
+
+* Robert Debock maintains [an Ansible role for DSVPN](https://github.com/robertdebock/ansible-role-dsvpn)
+* [OpenMPTCProuter](http://www.openmptcprouter.com/) is an OpenWRT-based router OS that supports DSVPN
+
 ## Why
 
 I needed a VPN that works in an environment where only TCP/80 and TCP/443 are open.
