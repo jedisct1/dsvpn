@@ -58,6 +58,8 @@ dd if=/dev/urandom of=vpn.key count=1 bs=32
 
 And copy it on the server and the client.
 
+On Linux, the minimum required kernel version is 3.17.
+
 ## Example usage on the server
 
 ```sh
