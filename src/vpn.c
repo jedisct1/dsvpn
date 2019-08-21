@@ -358,7 +358,7 @@ static int event_loop(Context *context)
         return -2;
     }
     if ((found_fds = poll(fds, POLLFD_COUNT, 1500)) == -1) {
-        return -1;
+        return errno == EINTR ? 0 : -1;
     }
     if (fds[POLLFD_LISTENER].revents & POLLIN) {
         new_client_fd = tcp_accept(context, context->listen_fd);
@@ -539,7 +539,7 @@ static int resolve_ip(char *ip, size_t sizeof_ip, const char *ip_or_name)
     hints.ai_addr     = NULL;
     if ((eai = getaddrinfo(ip_or_name, NULL, &hints, &res)) != 0 ||
         (res->ai_family != AF_INET && res->ai_family != AF_INET6) ||
-        (eai = getnameinfo(res->ai_addr, res->ai_addrlen, ip, sizeof_ip, NULL, 0,
+        (eai = getnameinfo(res->ai_addr, res->ai_addrlen, ip, (socklen_t) sizeof_ip, NULL, 0,
                            NI_NUMERICHOST | NI_NUMERICSERV)) != 0) {
         fprintf(stderr, "Unable to resolve [%s]: [%s]\n", ip_or_name, gai_strerror(eai));
         return -1;
@@ -598,6 +598,11 @@ int main(int argc, char *argv[])
     pledge("stdio proc exec dns inet", NULL);
 #endif
     context.firewall_rules_set = -1;
+    if (context.server_ip_or_name != NULL &&
+        resolve_ip(context.server_ip, sizeof context.server_ip, context.server_ip_or_name) != 0) {
+        firewall_rules(&context, 0, 1);
+        return 1;
+    }
     if (context.is_server) {
         if (firewall_rules(&context, 1, 0) != 0) {
             return -1;
@@ -608,10 +613,6 @@ int main(int argc, char *argv[])
 #endif
     } else {
         firewall_rules(&context, 0, 1);
-    }
-    if (context.server_ip_or_name != NULL &&
-        resolve_ip(context.server_ip, sizeof context.server_ip, context.server_ip_or_name) != 0) {
-        return 1;
     }
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);

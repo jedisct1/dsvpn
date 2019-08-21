@@ -10,10 +10,10 @@ Features:
 
 * Runs on TCP. Works pretty much everywhere, including on public WiFi where only TCP/443 is open or reliable.
 * Uses only modern cryptography, with formally verified implementations.
-* Low and constant memory footprint. Doesn't perform any heap memory allocations.
+* Small and constant memory footprint. Doesn't perform any heap memory allocations.
 * Small (~25 KB), with an equally small and readable code base. No external dependencies.
 * Works out of the box. No lousy documentation to read. No configuration file. No post-configuration. Run a single-line command on the server, a similar one on the client and you're done. No firewall and routing rules to manually mess with.
-* Works with Linux, MacOS and OpenBSD, as well as DragonFly BSD, FreeBSD and NetBSD in client and point-to-point modes. Adding support for other operating systems is trivial.
+* Works on Linux (kernel >= 3.17), MacOS and OpenBSD, as well as DragonFly BSD, FreeBSD and NetBSD in client and point-to-point modes. Adding support for other operating systems is trivial.
 * Doesn't leak between reconnects if the network doesn't change. Blocks IPv6 on the client to prevent IPv6 leaks.
 
 Next:
@@ -58,7 +58,12 @@ dd if=/dev/urandom of=vpn.key count=1 bs=32
 
 And copy it on the server and the client.
 
-On Linux, the minimum required kernel version is 3.17.
+If required, keys can be exported and imported in printable form:
+
+```sh
+base64 < vpn.key
+echo 'HK940OkWcFqSmZXnCQ1w6jhQMZm0fZoEhQOOpzJ/l3w=' | base64 -d > vpn.key
+```
 
 ## Example usage on the server
 
@@ -123,6 +128,11 @@ dsvpn   "client"
 * `<gateway ip>` (client only): the internal router IP address. The first line printed by `netstat -rn` will tell you (`gateway`).
 
 If all the remaining parameters of a command would be `auto`, they don't have to be specified.
+
+## Related projects
+
+* Robert Debock maintains [an Ansible role for DSVPN](https://github.com/robertdebock/ansible-role-dsvpn)
+* [OpenMPTCProuter](http://www.openmptcprouter.com/) is an OpenWRT-based router OS that supports DSVPN
 
 ## Why
 
