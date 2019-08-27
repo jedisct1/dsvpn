@@ -1,5 +1,7 @@
 # ![DSVPN](https://raw.github.com/jedisct1/dsvpn/master/logo.png)
 
+![GitHub CI status](https://shields-staging-pr-3898.herokuapp.com/github/actions/jedisct1/dsvpn/CI)
+
 DSVPN is a Dead Simple VPN, designed to address the most common use case for using a VPN:
 
 ```text
