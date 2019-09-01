@@ -204,6 +204,7 @@ int tun_set_mtu(const char *if_name, int mtu)
     ifr.ifr_mtu = mtu;
     snprintf(ifr.ifr_name, IFNAMSIZ, "%s", if_name);
     if (ioctl(fd, SIOCSIFMTU, &ifr) != 0) {
+        close(fd);
         return -1;
     }
     return close(fd);
