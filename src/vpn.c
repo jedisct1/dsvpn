@@ -245,7 +245,7 @@ static int tcp_accept(Context *context, int listen_fd)
     }
     getnameinfo((const struct sockaddr *) (const void *) &client_sa, client_sa_len, client_ip,
                 sizeof client_ip, NULL, 0, NI_NUMERICHOST | NI_NUMERICSERV);
-    printf("Accepting new client from [%s]\n", client_ip);
+    printf("Connection attempt from [%s]\n", client_ip);
     context->congestion = 0;
     fcntl(client_fd, F_SETFL, fcntl(client_fd, F_GETFL, 0) | O_NONBLOCK);
     if (server_key_exchange(context, client_fd) != 0) {
@@ -373,7 +373,7 @@ static int event_loop(Context *context)
         context->client_fd = new_client_fd;
         client_buf->pos    = 0;
         memset(client_buf->data, 0, sizeof client_buf->data);
-        puts("Accepted");
+        puts("Session established");
         fds[POLLFD_CLIENT] = (struct pollfd){ .fd = context->client_fd, .events = POLLIN };
     }
     if ((fds[POLLFD_TUN].revents & POLLERR) || (fds[POLLFD_TUN].revents & POLLHUP)) {
