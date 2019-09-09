@@ -64,7 +64,7 @@ If required, keys can be exported and imported in printable form:
 
 ```sh
 base64 < vpn.key
-echo 'HK940OkWcFqSmZXnCQ1w6jhQMZm0fZoEhQOOpzJ/l3w=' | base64 -d > vpn.key
+echo 'HK940OkWcFqSmZXnCQ1w6jhQMZm0fZoEhQOOpzJ/l3w=' | base64 --decode > vpn.key
 ```
 
 ## Example usage on the server
