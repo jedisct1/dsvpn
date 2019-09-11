@@ -1,4 +1,4 @@
-CFLAGS?=-march=native -Ofast -Wall -W -Wshadow -Wmissing-prototypes $(OPTFLAGS)
+CFLAGS?=-march=native -Ofast -fno-stack-check -Wall -W -Wshadow -Wmissing-prototypes $(OPTFLAGS)
 PREFIX?=/usr/local
 
 all: dsvpn
