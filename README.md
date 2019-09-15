@@ -15,7 +15,7 @@ Features:
 * Small and constant memory footprint. Doesn't perform any heap memory allocations.
 * Small (~25 KB), with an equally small and readable code base. No external dependencies.
 * Works out of the box. No lousy documentation to read. No configuration file. No post-configuration. Run a single-line command on the server, a similar one on the client and you're done. No firewall and routing rules to manually mess with.
-* Works on Linux (kernel >= 3.17), MacOS and OpenBSD, as well as DragonFly BSD, FreeBSD and NetBSD in client and point-to-point modes. Adding support for other operating systems is trivial.
+* Works on Linux (kernel >= 3.17), macOS and OpenBSD, as well as DragonFly BSD, FreeBSD and NetBSD in client and point-to-point modes. Adding support for other operating systems is trivial.
 * Doesn't leak between reconnects if the network doesn't change. Blocks IPv6 on the client to prevent IPv6 leaks.
 
 Next:
@@ -39,23 +39,23 @@ Never ever:
 ## Installation
 
 ```sh
-make
+$ make
 ```
 
 On Raspberry Pi 3 and 4, use the following command instead to enable NEON optimizations:
 
 ```sh
-env OPTFLAGS=-mfpu=neon make
+$ env OPTFLAGS=-mfpu=neon make
 ```
 
-On MacOS, it can be installed using Homebrew: `brew install nnathan/dsvpn/dsvpn`.
+On macOS, it can be installed using Homebrew: `brew install nnathan/dsvpn/dsvpn`.
 
 ## Secret key
 
 DSVPN uses a shared secret. Create it with the following command:
 
 ```sh
-dd if=/dev/urandom of=vpn.key count=1 bs=32
+$ dd if=/dev/urandom of=vpn.key count=1 bs=32
 ```
 
 And copy it on the server and the client.
@@ -63,14 +63,14 @@ And copy it on the server and the client.
 If required, keys can be exported and imported in printable form:
 
 ```sh
-base64 < vpn.key
-echo 'HK940OkWcFqSmZXnCQ1w6jhQMZm0fZoEhQOOpzJ/l3w=' | base64 --decode > vpn.key
+$ base64 < vpn.key
+$ echo 'HK940OkWcFqSmZXnCQ1w6jhQMZm0fZoEhQOOpzJ/l3w=' | base64 --decode > vpn.key
 ```
 
 ## Example usage on the server
 
 ```sh
-sudo ./dsvpn server vpn.key auto 1959
+$ sudo ./dsvpn server vpn.key auto 1959
 ```
 
 Here, I use port `1959`. Everything else is set to the default values. If you want to use the default port (`443`), it doesn't even have to be specified, so the parameters can just be `server vpn.key`
@@ -78,10 +78,10 @@ Here, I use port `1959`. Everything else is set to the default values. If you wa
 ## Example usage on the client
 
 ```sh
-sudo ./dsvpn client vpn.key 34.216.127.34 1959
+$ sudo ./dsvpn client vpn.key 34.216.127.34 1959
 ```
 
-This is a MacOS client, connecting to the VPN server `34.216.127.34` on port `1959`. The port number is optional here as well. And the IP can be replaced by a host name.
+This is a macOS client, connecting to the VPN server `34.216.127.34` on port `1959`. The port number is optional here as well. And the IP can be replaced by a host name.
 
 ## That's it
 
@@ -123,7 +123,7 @@ dsvpn   "client"
 * `<key file>`: path to the file with the secret key (e.g. `vpn.key`).
 * `<vpn server ip or name>`: on the client, it should be the IP address or the hostname of the server. On the server, it doesn't matter, so you can just use `auto`.
 * `<vpn server port>`: the TCP port to listen to/connect to for the VPN. Use 443 or anything else. `auto` will use `443`.
-* `<tun interface>`: this is the name of the VPN interface. On Linux, you can set it to anything. Or MacOS, it has to follow a more boring pattern. If you feel lazy, just use `auto` here.
+* `<tun interface>`: this is the name of the VPN interface. On Linux, you can set it to anything. Or macOS, it has to follow a more boring pattern. If you feel lazy, just use `auto` here.
 * `<local tun ip>`: local IP address of the tunnel. Use any private IP address that you don't use here.
 * `<remote tun ip>`: remote IP address of the tunnel. See above. The local and remote tunnel IPs must the same on the client and on the server, just reversed. For some reason, I tend to pick `192.168.192.254` for the server, and `192.168.192.1` for the client. These values will be used if you put `auto` for the local and remote tunnel IPs.
 * `<external ip>` (server only): the external IP address of the server. Can be left to `"auto"`.
@@ -150,7 +150,7 @@ OpenVPN is horribly difficult to set up.
 
 Sshuttle is very nice and I've been using it a lot in the past, but it's not a VPN. It doesn't tunnel non-TCP traffic. It also requires a full Python install, which I'd rather avoid on my router.
 
-Everything else I looked at was either too difficult to use, slow, bloated, didn't work on MacOS, didn't work on small devices, was complicated to cross-compile due to dependencies, wasn't maintained, or didn't feel secure.
+Everything else I looked at was either too difficult to use, slow, bloated, didn't work on macOS, didn't work on small devices, was complicated to cross-compile due to dependencies, wasn't maintained, or didn't feel secure.
 
 TCP-over-TCP is not as bad as some documents describe. It works surprisingly well in practice, especially with modern congestion control algorithms (BBR). For traditional algorithms that rely on packet loss, DSVPN couples the inner and outer congestion controllers by lowering `TCP_NOTSENT_LOWAT` and dropping packets when congestion is detected at the outer layer.
 
