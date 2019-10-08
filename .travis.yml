@@ -11,7 +11,7 @@ matrix:
       arch: amd64
       compiler: gcc
     - os: linux
-      arch: amd64
+      arch: arm64
       compiler: gcc
     - os: osx
       arch: amd64
