@@ -2,6 +2,10 @@ language: c
 sudo: false
 dist: xenial
 
+arch:
+ - amd64
+ - arm64
+
 compiler:
  - clang
  - gcc
