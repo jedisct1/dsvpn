@@ -2,12 +2,19 @@ language: c
 sudo: false
 dist: xenial
 
-arch:
- - amd64
- - arm64
-
-compiler:
- - clang
- - gcc
+matrix:
+  include:
+    - os: linux
+      arch: amd64
+      compiler: clang
+    - os: linux
+      arch: amd64
+      compiler: gcc
+    - os: linux
+      arch: amd64
+      compiler: gcc
+    - os: osx
+      arch: amd64
+      compiler: clang
 
 script: make
