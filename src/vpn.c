@@ -513,7 +513,7 @@ __attribute__((noreturn)) static void usage(void)
          "\n\n"
          "dsvpn\t\"client\"\n\t<key file>\n\t<vpn server ip or name>\n\t<vpn server "
          "port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun "
-         "ip>|\"auto\"\n\t<remote tun ip>|\"auto\"\n\t<gateway ip>\"auto\"\n");
+         "ip>|\"auto\"\n\t<remote tun ip>|\"auto\"\n\t<gateway ip>|\"auto\"\n");
     exit(254);
 }
 
