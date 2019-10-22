@@ -4,7 +4,7 @@
 #ifdef __SSSE3__
 #include <x86intrin.h>
 #endif
-#if defined(__ARM_NEON_FP) || defined(__aarch64__)
+#if defined(__ARM_NEON) || defined(__aarch64__)
 #include <arm_neon.h>
 #endif
 #ifdef __linux__
@@ -27,7 +27,9 @@
 #endif
 #endif
 
-#define ROUNDS 12
+#ifndef XOODOO_ROUNDS
+#define XOODOO_ROUNDS 12
+#endif
 
 static inline void mem_cpy(unsigned char *dst, const unsigned char *src, size_t n)
 {
@@ -52,7 +54,7 @@ static void permute(uint32_t st[12])
     a = _mm_loadu_si128((const __m128i *) (const void *) &st[0]);
     b = _mm_loadu_si128((const __m128i *) (const void *) &st[4]);
     c = _mm_loadu_si128((const __m128i *) (const void *) &st[8]);
-    for (r = 0; r < ROUNDS; r++) {
+    for (r = 0; r < XOODOO_ROUNDS; r++) {
         p = _mm_shuffle_epi32(_mm_xor_si128(_mm_xor_si128(a, b), c), 0x93);
         e = ROL32in128(p, 5);
         p = ROL32in128(p, 14);
@@ -73,7 +75,7 @@ static void permute(uint32_t st[12])
     _mm_storeu_si128((__m128i *) (void *) &st[4], b);
     _mm_storeu_si128((__m128i *) (void *) &st[8], c);
 }
-#elif defined(__ARM_NEON_FP) || defined(__aarch64__)
+#elif defined(__ARM_NEON) || defined(__aarch64__)
 #define ROL32in128(x, b) vsriq_n_u32(vshlq_n_u32((x), (b)), (x), 32 - (b))
 
 static void permute(uint32_t st[12])
@@ -84,7 +86,7 @@ static void permute(uint32_t st[12])
     a = vld1q_u32((const uint32_t *) (const void *) &st[0]);
     b = vld1q_u32((const uint32_t *) (const void *) &st[4]);
     c = vld1q_u32((const uint32_t *) (const void *) &st[8]);
-    for (r = 0; r < ROUNDS; r++) {
+    for (r = 0; r < XOODOO_ROUNDS; r++) {
         d = veorq_u32(veorq_u32(a, b), c);
         d = vextq_u32(d, d, 3);
         e = ROL32in128(d, 5);
@@ -122,7 +124,7 @@ static void permute(uint32_t st[12])
 {
     uint32_t e[4], a, b, c, t, r, i;
 
-    for (r = 0; r < ROUNDS; r++) {
+    for (r = 0; r < XOODOO_ROUNDS; r++) {
         for (i = 0; i < 4; i++) {
             e[i] = ROTR32(st[i] ^ st[i + 4] ^ st[i + 8], 18);
             e[i] ^= ROTR32(e[i], 9);
