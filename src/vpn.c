@@ -514,9 +514,9 @@ __attribute__((noreturn)) static void usage(void)
          "dsvpn\t\"client\"\n\t<key file>\n\t<vpn server ip or name>\n\t<vpn server "
          "port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun "
          "ip>|\"auto\"\n\t<remote tun ip>|\"auto\"\n\t<gateway ip>|\"auto\"\n\n"
-         "Example:\n\n[server]\n\tdd if=/dev/urandom of=vpn.key count=1 bs=32\n"
-         "\t# copy key\n\tbase64 < vpn.key\n\t# listen on 443\n\tsudo ./dsvpn server vpn.key\n\n"
-         "[client]\n\t# paste key\n\techo ohKD...W4= | base64 --decode > vpn.key\n"
+         "Example:\n\n[server]\n\tdd if=/dev/urandom of=vpn.key count=1 bs=32\t# create key\n"
+         "\tbase64 < vpn.key\t\t# copy key as a string\n\tsudo ./dsvpn server vpn.key\t# listen on "
+         "443\n\n[client]\n\techo ohKD...W4= | base64 --decode > vpn.key\t# paste key\n"
          "\tsudo ./dsvpn client vpn.key 34.216.127.34\n");
     exit(254);
 }
