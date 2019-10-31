@@ -10,6 +10,7 @@ DSVPN is a Dead Simple VPN, designed to address the most common use case for usi
 
 Features:
 
+
 * Runs on TCP. Works pretty much everywhere, including on public WiFi where only TCP/443 is open or reliable.
 * Uses only modern cryptography, with formally verified implementations.
 * Small and constant memory footprint. Doesn't perform any heap memory allocations.
