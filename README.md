@@ -18,24 +18,6 @@ Features:
 * Works on Linux (kernel >= 3.17), macOS and OpenBSD, as well as DragonFly BSD, FreeBSD and NetBSD in client and point-to-point modes. Adding support for other operating systems is trivial.
 * Doesn't leak between reconnects if the network doesn't change. Blocks IPv6 on the client to prevent IPv6 leaks.
 
-Next:
-
-* Make the handshake non-blocking.
-
-Maybe:
-
-* Automatically change the DNS settings of the client to the default resolver used by the server.
-* The ability to run custom commands after the link is up.
-* Support for multiple clients.
-
-Non-features:
-
-* Anything else. Including supporting operating systems I don't use.
-
-Never ever:
-
-* Any feature request mentioning `systemd`.
-
 ## Installation
 
 ```sh
