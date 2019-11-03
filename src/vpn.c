@@ -149,8 +149,8 @@ static int tcp_listener(const char *address, const char *port)
     (void) setsockopt(listen_fd, IPPROTO_IPV6, IPV6_V6ONLY, (char *) (int[]){ 0 }, sizeof(int));
 #endif
 #ifdef TCP_DEFER_ACCEPT
-    (void) setsockopt(listen_fd, SOL_TCP, TCP_DEFER_ACCEPT, (char *) (int[]){ TIMEOUT / 1000 },
-                      sizeof(int));
+    (void) setsockopt(listen_fd, SOL_TCP, TCP_DEFER_ACCEPT,
+                      (char *) (int[]){ ACCEPT_TIMEOUT / 1000 }, sizeof(int));
 #endif
     printf("Listening to %s:%s\n", address == NULL ? "*" : address, port);
     if (bind(listen_fd, (struct sockaddr *) res->ai_addr, (socklen_t) res->ai_addrlen) != 0 ||
@@ -185,15 +185,9 @@ static int server_key_exchange(Context *context, const int client_fd)
 
     memcpy(st, context->uc_kx_st, sizeof st);
     errno = EACCES;
-#ifdef TCP_DEFER_ACCEPT
-    if (safe_read_partial(client_fd, pkt1, sizeof pkt1) != sizeof pkt1) {
+    if (safe_read(client_fd, pkt1, sizeof pkt1, ACCEPT_TIMEOUT) != sizeof pkt1) {
         return -1;
     }
-#else
-    if (safe_read(client_fd, pkt1, sizeof pkt1, TIMEOUT) != sizeof pkt1) {
-        return -1;
-    }
-#endif
     uc_hash(st, h, pkt1, 32 + 8);
     if (memcmp(h, pkt1 + 32 + 8, 32) != 0) {
         return -1;
