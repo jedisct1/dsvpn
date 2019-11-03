@@ -24,6 +24,7 @@ typedef struct Context_ {
     const char *  server_port;
     const char *  ext_if_name;
     const char *  wanted_ext_gw_ip;
+    char          client_ip[NI_MAXHOST];
     char          ext_gw_ip[64];
     char          server_ip[64];
     char          if_name[IFNAMSIZ];
@@ -217,7 +218,7 @@ static int server_key_exchange(Context *context, const int client_fd)
 
 static int tcp_accept(Context *context, int listen_fd)
 {
-    char                    client_ip[NI_MAXHOST];
+    char                    client_ip[NI_MAXHOST] = { 0 };
     struct sockaddr_storage client_ss;
     socklen_t               client_ss_len = sizeof client_ss;
     int                     client_fd;
@@ -242,12 +243,20 @@ static int tcp_accept(Context *context, int listen_fd)
     printf("Connection attempt from [%s]\n", client_ip);
     context->congestion = 0;
     fcntl(client_fd, F_SETFL, fcntl(client_fd, F_GETFL, 0) | O_NONBLOCK);
+    if (context->client_fd != -1 &&
+        memcmp(context->client_ip, client_ip, sizeof context->client_ip) != 0) {
+        fprintf(stderr, "Closing: a session from [%s] is already active\n", context->client_ip);
+        (void) close(client_fd);
+        errno = EBUSY;
+        return -1;
+    }
     if (server_key_exchange(context, client_fd) != 0) {
         fprintf(stderr, "Authentication failed\n");
         (void) close(client_fd);
         errno = EACCES;
         return -1;
     }
+    memcpy(context->client_ip, client_ip, sizeof context->client_ip);
     return client_fd;
 }
 
