@@ -218,15 +218,15 @@ static int server_key_exchange(Context *context, const int client_fd)
 static int tcp_accept(Context *context, int listen_fd)
 {
     char                    client_ip[NI_MAXHOST];
-    struct sockaddr_storage client_sa;
-    socklen_t               client_sa_len = sizeof client_sa;
+    struct sockaddr_storage client_ss;
+    socklen_t               client_ss_len = sizeof client_ss;
     int                     client_fd;
     int                     err;
 
-    if ((client_fd = accept(listen_fd, (struct sockaddr *) &client_sa, &client_sa_len)) < 0) {
+    if ((client_fd = accept(listen_fd, (struct sockaddr *) &client_ss, &client_ss_len)) < 0) {
         return -1;
     }
-    if (client_sa_len <= (socklen_t) 0U) {
+    if (client_ss_len <= (socklen_t) 0U) {
         (void) close(client_fd);
         errno = EINTR;
         return -1;
@@ -237,7 +237,7 @@ static int tcp_accept(Context *context, int listen_fd)
         errno = err;
         return -1;
     }
-    getnameinfo((const struct sockaddr *) (const void *) &client_sa, client_sa_len, client_ip,
+    getnameinfo((const struct sockaddr *) (const void *) &client_ss, client_ss_len, client_ip,
                 sizeof client_ip, NULL, 0, NI_NUMERICHOST | NI_NUMERICSERV);
     printf("Connection attempt from [%s]\n", client_ip);
     context->congestion = 0;
