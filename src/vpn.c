@@ -2,6 +2,7 @@
 #include "charm.h"
 #include "os.h"
 
+#define WEBSOCKET_HEADERS_LEN 1024
 static const int POLLFD_TUN = 0, POLLFD_LISTENER = 1, POLLFD_CLIENT = 2, POLLFD_COUNT = 3;
 
 typedef struct __attribute__((aligned(16))) Buf_ {
@@ -175,6 +176,33 @@ static void client_disconnect(Context *context)
     memset(context->uc_st, 0, sizeof context->uc_st);
 }
 
+static int server_websocket_exchange(const int client_fd)
+{
+    char websocket_headers[WEBSOCKET_HEADERS_LEN];
+
+    if (safe_read(client_fd, websocket_headers, sizeof websocket_headers, ACCEPT_TIMEOUT) !=
+            sizeof websocket_headers ||
+        memcmp(&websocket_headers[sizeof websocket_headers - 9], "VPN\r\n\r\n", 8) != 0) {
+        return -1;
+    }
+    memset(websocket_headers, '-', sizeof websocket_headers);
+    snprintf(websocket_headers, sizeof websocket_headers,
+             "HTTP/1.1 101 Web Socket Protocol Handshake\r\n"
+             "Connection: Upgrade\r\n"
+             "Server: dsvpn/" VERSION_STRING
+             "\r\n"
+             "Upgrade: websocket\r\n"
+             "Sec-WebSocket-Accept: WNebq7bp/cdGYMO8cNknMBXq2Sk=\r\n"
+             "X-Pad: ");
+    websocket_headers[strlen(websocket_headers)] = '-';
+    memcpy(&websocket_headers[sizeof websocket_headers - 9], "VPN\r\n\r\n", 8);
+    if (safe_write(client_fd, websocket_headers, sizeof websocket_headers, ACCEPT_TIMEOUT) !=
+        sizeof websocket_headers) {
+        return -1;
+    }
+    return 0;
+}
+
 static int server_key_exchange(Context *context, const int client_fd)
 {
     uint32_t st[12];
@@ -184,8 +212,11 @@ static int server_key_exchange(Context *context, const int client_fd)
     uint8_t  iv[16] = { 0 };
     uint64_t ts, now;
 
-    memcpy(st, context->uc_kx_st, sizeof st);
     errno = EACCES;
+    if (server_websocket_exchange(client_fd) != 0) {
+        return -1;
+    }
+    memcpy(st, context->uc_kx_st, sizeof st);
     if (safe_read(client_fd, pkt1, sizeof pkt1, ACCEPT_TIMEOUT) != sizeof pkt1) {
         return -1;
     }
@@ -260,6 +291,35 @@ static int tcp_accept(Context *context, int listen_fd)
     return client_fd;
 }
 
+static int client_websocket_exchange(Context *context)
+{
+    char websocket_headers[WEBSOCKET_HEADERS_LEN];
+
+    memset(websocket_headers, '-', sizeof websocket_headers);
+    snprintf(websocket_headers, sizeof websocket_headers,
+             "GET / HTTP/1.1\r\n"
+             "Host: %s\r\n"
+             "User-Agent: dsvpn/" VERSION_STRING
+             "\r\n"
+             "Connection: Upgrade\r\n"
+             "Upgrade: websocket\r\n"
+             "Sec-WebSocket-Key: ZHN2cG4=\r\n"
+             "X-Pad: ",
+             context->server_ip_or_name);
+    websocket_headers[strlen(websocket_headers)] = '-';
+    memcpy(&websocket_headers[sizeof websocket_headers - 9], "VPN\r\n\r\n", 8);
+    if (safe_write(context->client_fd, websocket_headers, sizeof websocket_headers,
+                   ACCEPT_TIMEOUT) != sizeof websocket_headers) {
+        return -1;
+    }
+    if (safe_read(context->client_fd, websocket_headers, sizeof websocket_headers, TIMEOUT) !=
+            sizeof websocket_headers ||
+        memcmp(&websocket_headers[sizeof websocket_headers - 9], "VPN\r\n\r\n", 8) != 0) {
+        return -1;
+    }
+    return 0;
+}
+
 static int client_key_exchange(Context *context)
 {
     uint32_t st[12];
@@ -269,6 +329,10 @@ static int client_key_exchange(Context *context)
     uint8_t  iv[16] = { 0 };
     uint64_t now;
 
+    errno = EACCES;
+    if (client_websocket_exchange(context) != 0) {
+        return -1;
+    }
     memcpy(st, context->uc_kx_st, sizeof st);
     uc_randombytes_buf(pkt1, 32);
     now = endian_swap64(time(NULL));
