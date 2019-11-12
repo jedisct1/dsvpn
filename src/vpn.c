@@ -624,6 +624,7 @@ int main(int argc, char *argv[])
 {
     Context     context;
     const char *ext_gw_ip;
+    const char *default_port = DEFAULT_PORT;
 
     if (argc < 3) {
         usage();
@@ -638,7 +639,12 @@ int main(int argc, char *argv[])
     if (context.server_ip_or_name == NULL && !context.is_server) {
         usage();
     }
-    context.server_port    = (argc <= 4 || strcmp(argv[4], "auto") == 0) ? DEFAULT_PORT : argv[4];
+    context.use_websocket = (argc <= 9 || strcmp(argv[9], "websocket") != 0) ? 0 : 1;
+    if (context.use_websocket) {
+        puts("VPN-over-WebSocket enabled");
+        default_port = "80";
+    }
+    context.server_port    = (argc <= 4 || strcmp(argv[4], "auto") == 0) ? default_port : argv[4];
     context.wanted_if_name = (argc <= 5 || strcmp(argv[5], "auto") == 0) ? NULL : argv[5];
     context.local_tun_ip   = (argc <= 6 || strcmp(argv[6], "auto") == 0)
                                ? (context.is_server ? DEFAULT_SERVER_IP : DEFAULT_CLIENT_IP)
@@ -647,7 +653,6 @@ int main(int argc, char *argv[])
                                 ? (context.is_server ? DEFAULT_CLIENT_IP : DEFAULT_SERVER_IP)
                                 : argv[7];
     context.wanted_ext_gw_ip = (argc <= 8 || strcmp(argv[8], "auto") == 0) ? NULL : argv[8];
-    context.use_websocket    = (argc <= 9 || strcmp(argv[9], "websocket") != 0) ? 0 : 1;
     ext_gw_ip = context.wanted_ext_gw_ip ? context.wanted_ext_gw_ip : get_default_gw_ip();
     snprintf(context.ext_gw_ip, sizeof context.ext_gw_ip, "%s", ext_gw_ip == NULL ? "" : ext_gw_ip);
     if (ext_gw_ip == NULL && !context.is_server) {

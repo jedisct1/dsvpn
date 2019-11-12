@@ -112,7 +112,7 @@ dsvpn   "client"
 * `<remote tun ip>`: remote IP address of the tunnel. See above. The local and remote tunnel IPs must the same on the client and on the server, just reversed. For some reason, I tend to pick `192.168.192.254` for the server, and `192.168.192.1` for the client. These values will be used if you put `auto` for the local and remote tunnel IPs.
 * `<external ip>` (server only): the external IP address of the server. Can be left to `"auto"`.
 * `<gateway ip>` (client only): the internal router IP address. The first line printed by `netstat -rn` will tell you (`gateway`).
-* `<protocol>` can be set to `websocket` in order to make the connection look like a WebSocket. Enable only if you need to use DSVPN over a CDN. Leave to `auto` otherwise. The client and the server must use the same `protocol` value.
+* `<protocol>` can be set to `websocket` in order to make the connection look like a WebSocket. Enable only if you need to use DSVPN over a CDN. Leave to `auto` otherwise. The client and the server must use the same `protocol` value. If VPN-over-WebSocket is enabled, the default port becomes port `80`.
 
 If all the remaining parameters of a command would be `auto`, they don't have to be specified.
 
