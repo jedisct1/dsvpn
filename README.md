@@ -90,6 +90,7 @@ dsvpn   "server"
         <local tun ip>|"auto"
         <remote tun ip>"auto"
         <external ip>|"auto"
+        <protocol>|"auto"
 
 dsvpn   "client"
         <key file>
@@ -99,6 +100,7 @@ dsvpn   "client"
         <local tun ip>|"auto"
         <remote tun ip>|"auto"
         <gateway ip>|"auto"
+        <protocol>|"auto"
 ```
 
 * `server`|`client`: use `server` on the server, and `client` on clients.

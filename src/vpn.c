@@ -30,6 +30,7 @@ typedef struct Context_ {
     char          server_ip[64];
     char          if_name[IFNAMSIZ];
     int           is_server;
+    int           use_websocket;
     int           tun_fd;
     int           client_fd;
     int           listen_fd;
@@ -213,7 +214,7 @@ static int server_key_exchange(Context *context, const int client_fd)
     uint64_t ts, now;
 
     errno = EACCES;
-    if (server_websocket_exchange(client_fd) != 0) {
+    if (context->use_websocket && server_websocket_exchange(client_fd) != 0) {
         return -1;
     }
     memcpy(st, context->uc_kx_st, sizeof st);
@@ -330,7 +331,7 @@ static int client_key_exchange(Context *context)
     uint64_t now;
 
     errno = EACCES;
-    if (client_websocket_exchange(context) != 0) {
+    if (context->use_websocket && client_websocket_exchange(context) != 0) {
         return -1;
     }
     memcpy(st, context->uc_kx_st, sizeof st);
@@ -575,12 +576,13 @@ __attribute__((noreturn)) static void usage(void)
          " usage:\n"
          "\n"
          "dsvpn\t\"server\"\n\t<key file>\n\t<vpn server ip or name>|\"auto\"\n\t<vpn "
-         "server port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun "
-         "ip>|\"auto\"\n\t<remote tun ip>\"auto\"\n\t<external ip>|\"auto\""
+         "server port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun ip>|\"auto\"\n\t<remote "
+         "tun ip>\"auto\"\n\t<external ip>|\"auto\"\n\t<protocol>|\"auto\""
          "\n\n"
          "dsvpn\t\"client\"\n\t<key file>\n\t<vpn server ip or name>\n\t<vpn server "
-         "port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun "
-         "ip>|\"auto\"\n\t<remote tun ip>|\"auto\"\n\t<gateway ip>|\"auto\"\n\n"
+         "port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun ip>|\"auto\"\n\t<remote tun "
+         "ip>|\"auto\"\n\t<gateway ip>|\"auto\"\n\t<protocol>|\"auto\""
+         "\n\n"
          "Example:\n\n[server]\n\tdd if=/dev/urandom of=vpn.key count=1 bs=32\t# create key\n"
          "\tbase64 < vpn.key\t\t# copy key as a string\n\tsudo ./dsvpn server vpn.key\t# listen on "
          "443\n\n[client]\n\techo ohKD...W4= | base64 --decode > vpn.key\t# paste key\n"
@@ -645,6 +647,7 @@ int main(int argc, char *argv[])
                                 ? (context.is_server ? DEFAULT_CLIENT_IP : DEFAULT_SERVER_IP)
                                 : argv[7];
     context.wanted_ext_gw_ip = (argc <= 8 || strcmp(argv[8], "auto") == 0) ? NULL : argv[8];
+    context.use_websocket    = (argc <= 9 || strcmp(argv[9], "websocket") != 0) ? 0 : 1;
     ext_gw_ip = context.wanted_ext_gw_ip ? context.wanted_ext_gw_ip : get_default_gw_ip();
     snprintf(context.ext_gw_ip, sizeof context.ext_gw_ip, "%s", ext_gw_ip == NULL ? "" : ext_gw_ip);
     if (ext_gw_ip == NULL && !context.is_server) {
