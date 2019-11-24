@@ -2,17 +2,26 @@ language: c
 sudo: false
 dist: xenial
 
+env:
+  - CFLAGS="-Wall -W -O"
+
+os:
+  - linux
+
+compiler:
+  - gcc
+  - clang
+
+arch:
+  - arm64
+  - amd64
+
 matrix:
   include:
-    - os: linux
-      arch: amd64
+    - arch: s390x
       compiler: clang
-    - os: linux
-      arch: amd64
-      compiler: gcc
-    - os: linux
-      arch: arm64
-      compiler: gcc
+    - arch: ppc64le
+      compiler: clang      
     - os: osx
       arch: amd64
       compiler: clang
