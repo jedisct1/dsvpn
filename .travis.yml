@@ -15,13 +15,11 @@ compiler:
 arch:
   - arm64
   - amd64
+  - s390x
+  - ppc64le
 
 matrix:
   include:
-    - arch: s390x
-      compiler: clang
-    - arch: ppc64le
-      compiler: clang      
     - os: osx
       arch: amd64
       compiler: clang
