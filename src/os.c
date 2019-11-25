@@ -486,9 +486,12 @@ Cmds firewall_rules_cmds(int is_server)
 #endif
               NULL },
                           *unset_cmds[] = {
+#ifndef NO_DEFAULT_ROUTES
                               "route delete $EXT_IP",         "route delete 0/1",
                               "route delete 128/1",           "route delete -inet6 0000::/1",
-                              "route delete -inet6 8000::/1", NULL
+                              "route delete -inet6 8000::/1",
+#endif
+                              NULL
                           };
 #elif defined(__linux__)
         static const char
@@ -505,9 +508,14 @@ Cmds firewall_rules_cmds(int is_server)
                             "ip -6 rule add table main suppress_prefixlength 0",
 #endif
                             NULL },
-            *unset_cmds[] = { "ip rule delete table 42069", "ip -6 rule delete table 42069",
+            *unset_cmds[] = {
+#ifndef NO_DEFAULT_ROUTES
+                              "ip rule delete table 42069",
+                              "ip -6 rule delete table 42069",
                               "ip rule delete table main suppress_prefixlength 0",
-                              "ip -6 rule delete table main suppress_prefixlength 0", NULL };
+                              "ip -6 rule delete table main suppress_prefixlength 0",
+#endif
+                              NULL };
 #else
         static const char *const *set_cmds = NULL, *const *unset_cmds = NULL;
 #endif
