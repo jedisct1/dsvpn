@@ -2,9 +2,6 @@ language: c
 sudo: false
 dist: xenial
 
-env:
-  - CFLAGS="-Wall -W -O"
-
 os:
   - linux
 
