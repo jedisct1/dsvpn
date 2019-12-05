@@ -519,9 +519,9 @@ Cmds firewall_rules_cmds(int is_server)
                 "ip -6 rule delete table 42069",
                 "ip rule delete table main suppress_prefixlength 0",
                 "ip -6 rule delete table main suppress_prefixlength 0",
+#endif
                 "iptables -t raw -D PREROUTING ! -i $IF_NAME -d $LOCAL_TUN_IP -m addrtype ! "
                 "--src-type LOCAL -j DROP",
-#endif
                 NULL
             };
 #else
