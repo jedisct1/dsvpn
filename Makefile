@@ -9,7 +9,7 @@ dsvpn: $(CFLAGS_FILE) Makefile src/vpn.c src/charm.c src/os.c include/charm.h in
 	strip $@
 
 install: dsvpn
-	install -m 0755 dsvpn $(PREFIX)/sbin
+	install -m 0755 dsvpn $(PREFIX)/sbin/
 
 uninstall:
 	rm $(PREFIX)/sbin/dsvpn
