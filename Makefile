@@ -22,7 +22,7 @@ $(CFLAGS_FILE):
 	@if [ -z "$$CFLAGS" ]; then \
 		if [ ! -r "$(CFLAGS_FILE)" ]; then \
 			echo "int main(void) { return 0; }" > "$(COMPILE_TEST_FILE)"; \
-			for flag in -march=native -mcpu=native -Ofast -Wno-unused-command-line-argument; do \
+			for flag in -march=native -mtune=native -Ofast -Wno-unused-command-line-argument; do \
 				$(CC) $${CFLAGS} $${flag} "$(COMPILE_TEST_FILE)" >/dev/null 2>&1 && CFLAGS="$$CFLAGS $$flag"; \
 			done; \
 			CFLAGS="$${CFLAGS} -Wall -W -Wshadow -Wmissing-prototypes"; \
