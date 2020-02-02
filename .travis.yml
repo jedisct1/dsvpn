@@ -1,6 +1,6 @@
 language: c
 sudo: false
-dist: xenial
+dist: bionic
 
 os:
   - linux
