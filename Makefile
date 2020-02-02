@@ -27,6 +27,14 @@ $(CFLAGS_FILE):
 				$(CC) $${CFLAGS} $${flag} "$(COMPILE_TEST_FILE)" >/dev/null 2>&1 && CFLAGS="$$CFLAGS $$flag"; \
 			done; \
 			CFLAGS="$${CFLAGS} -Wall -W -Wshadow -Wmissing-prototypes"; \
+			echo "#include <unistd.h>\n#include <sys/syscall.h>\nint main(void) { char buf[32] = {0}; syscall(SYS_getrandom, buf, 32, 0); }" > "$(COMPILE_TEST_FILE)"; \
+			if ! $(CC) "$(COMPILE_TEST_FILE)" >/dev/null 2>&1; then \
+				arch=$$(uname -m); \
+				case $$arch in \
+	              aarch64) CFLAGS="$$CFLAGS -DSYS_getrandom=278";; \
+				  x86_64) CFLAGS="$$CFLAGS -DSYS_getrandom=318";; \
+				esac; \
+			fi \
 		fi \
 	fi; \
 	echo "$$CFLAGS" > "$(CFLAGS_FILE)"
