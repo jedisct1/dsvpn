@@ -421,7 +421,7 @@ int shell_cmd(const char *substs[][2], const char *args_str, int silent)
         }
         cmdbuf[cmdbuf_i++] = 0;
     }
-    if (args_i >= sizeof args / sizeof args[0]) {
+    if (args_i >= sizeof args / sizeof args[0] || args_i == 0) {
         return -1;
     }
     args[args_i] = NULL;
