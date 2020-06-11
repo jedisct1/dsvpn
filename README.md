@@ -2,6 +2,7 @@
 
 [![GitHub CI status](https://github.com/jedisct1/dsvpn/workflows/CI/badge.svg)](https://github.com/jedisct1/dsvpn/actions)
 [![Travis CI status](https://api.travis-ci.org/jedisct1/dsvpn.svg?branch=master)](https://travis-ci.org/jedisct1/dsvpn)
+![CodeQL scan](https://github.com/jedisct1/dsvpn/workflows/CodeQL%20scan/badge.svg)
 
 DSVPN is a Dead Simple VPN, designed to address the most common use case for using a VPN:
 
