@@ -26,7 +26,7 @@ Features:
 make
 ```
 
-On Raspberry Pi 3 and 4, use the following command instead to enable NEON optimizations:
+On ARM chips, such as the M1 (Apple Silicon) or the Raspberry Pi 3 & 4, use the following command instead to enable NEON optimizations:
 
 ```sh
 env OPTFLAGS=-mfpu=neon make
