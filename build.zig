@@ -3,11 +3,10 @@ const builtin = @import("builtin");
 
 pub fn build(b: *std.build.Builder) !void {
     var target = b.standardTargetOptions(.{});
-    const mode = builtin.mode.ReleaseSmall;
 
     const dsvpn = b.addExecutable("dsvpn", null);
     dsvpn.setTarget(target);
-    dsvpn.setBuildMode(mode);
+    dsvpn.setBuildMode(.ReleaseSmall);
     dsvpn.install();
     dsvpn.linkLibC();
 
