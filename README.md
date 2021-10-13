@@ -32,7 +32,13 @@ On Raspberry Pi 3 and 4, use the following command instead to enable NEON optimi
 env OPTFLAGS=-mfpu=neon make
 ```
 
-On macOS, it can be installed using Homebrew: `brew install dsvpn`.
+Alternatively, if you have [zig](https://ziglang.org) installed, it can be used to compile DSVPN:
+
+```sh
+zig build
+```
+
+On macOS, DSVPN can be installed using Homebrew: `brew install dsvpn`.
 
 ## Secret key
 
