@@ -38,3 +38,5 @@ dkms.conf
 dsvpn
 key
 modules.order
+zig-out
+zig-cache
