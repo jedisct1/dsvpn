@@ -296,10 +296,11 @@ static int client_key_exchange(Context *context)
 
 static int client_connect(Context *context)
 {
-    const char *ext_gw_ip;
+    const char *ext_gw_ip = NULL;
 
     context->client_buf.pos = 0;
     memset(context->client_buf.data, 0, sizeof context->client_buf.data);
+#ifndef NO_DEFAULT_ROUTES
     if (context->wanted_ext_gw_ip == NULL && (ext_gw_ip = get_default_gw_ip()) != NULL &&
         strcmp(ext_gw_ip, context->ext_gw_ip) != 0) {
         printf("Gateway changed from [%s] to [%s]\n", context->ext_gw_ip, ext_gw_ip);
@@ -307,6 +308,7 @@ static int client_connect(Context *context)
         snprintf(context->ext_gw_ip, sizeof context->ext_gw_ip, "%s", ext_gw_ip);
         firewall_rules(context, 1, 0);
     }
+#endif
     memset(context->uc_st, 0, sizeof context->uc_st);
     context->uc_st[context->is_server][0] ^= 1;
     context->client_fd = tcp_client(context->server_ip, context->server_port);
