@@ -452,10 +452,8 @@ static int event_loop(Context *context)
             }
             if (2 + TAG_LEN + MAX_PACKET_LEN != len_with_header) {
                 unsigned char *rbuf      = client_buf->len;
-                size_t         remaining = client_buf->pos - len_with_header, i;
-                for (i = 0; i < remaining; i++) {
-                    rbuf[i] = rbuf[len_with_header + i];
-                }
+                size_t         remaining = client_buf->pos - len_with_header;
+                memmove(rbuf, rbuf + len_with_header, remaining);
             }
             client_buf->pos -= len_with_header;
         }
