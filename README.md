@@ -35,7 +35,7 @@ env OPTFLAGS=-mfpu=neon make
 Alternatively, if you have [zig](https://ziglang.org) installed, it can be used to compile DSVPN:
 
 ```sh
-zig build
+zig build -Drelease
 ```
 
 On macOS, DSVPN can be installed using Homebrew: `brew install dsvpn`.
