@@ -10,6 +10,7 @@ pub fn build(b: *std.build.Builder) !void {
         .target = target,
         .optimize = optimize,
     });
+    dsvpn.linkLibC();
     dsvpn.addIncludePath(.{ .path = "include" });
     dsvpn.defineCMacro("_GNU_SOURCE", "1");
     dsvpn.addCSourceFiles(&.{ "src/charm.c", "src/os.c", "src/vpn.c" }, &.{});
