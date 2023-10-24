@@ -13,7 +13,12 @@ pub fn build(b: *std.build.Builder) !void {
     dsvpn.linkLibC();
     dsvpn.addIncludePath(.{ .path = "include" });
     dsvpn.defineCMacro("_GNU_SOURCE", "1");
-    dsvpn.addCSourceFiles(&.{ "src/charm.c", "src/os.c", "src/vpn.c" }, &.{});
+    const source_files = &.{ "src/charm.c", "src/os.c", "src/vpn.c" };
+    if (@hasDecl(std.Build.Step.Compile, "AddCSourceFilesOptions")) {
+        dsvpn.addCSourceFiles(.{ .files = source_files });
+    } else {
+        dsvpn.addCSourceFiles(source_files, &.{});
+    }
     b.installArtifact(dsvpn);
     const run_cmd = b.addRunArtifact(dsvpn);
     run_cmd.step.dependOn(b.getInstallStep());
