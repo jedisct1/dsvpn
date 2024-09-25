@@ -39,4 +39,4 @@ dsvpn
 key
 modules.order
 zig-out
-zig-cache
+.zig-cache
