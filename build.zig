@@ -13,7 +13,7 @@ pub fn build(b: *std.Build) !void {
     });
     dsvpn.linkLibC();
     dsvpn.addIncludePath(b.path("include"));
-    dsvpn.defineCMacro("_GNU_SOURCE", "1");
+    dsvpn.root_module.addCMacro("_GNU_SOURCE", "1");
     const source_files = &.{ "src/charm.c", "src/os.c", "src/vpn.c" };
     dsvpn.addCSourceFiles(.{ .files = source_files });
     b.installArtifact(dsvpn);
