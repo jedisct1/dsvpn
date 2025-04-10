@@ -1,0 +1,299 @@
+--- include/vpn.h
++++ include/vpn.h
+@@ -64,6 +64,7 @@
+ #define DEFAULT_CLIENT_IP "192.168.192.1"
+ #define DEFAULT_SERVER_IP "192.168.192.254"
+ #define DEFAULT_PORT "443"
++#define NOCRYPTO_MAGIC "NOCRYPTO"
+ 
+ #if defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__) && \
+     __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__ && !defined(NATIVE_BIG_ENDIAN)
+@@ -79,6 +80,8 @@
+ 
+ extern volatile sig_atomic_t exit_signal_received;
+ 
++typedef enum { CRYPTO_ENABLED, CRYPTO_DISABLED } crypto_mode_t;
++
+ #endif
+ 
+ 
+--- src/vpn.c
++++ src/vpn.c
+@@ -33,6 +33,7 @@ typedef struct Context_ {
+     const char *  ext_if_name;
+     const char *  wanted_ext_gw_ip;
+     char          client_ip[NI_MAXHOST];
++    crypto_mode_t crypto_mode;
+     char          ext_gw_ip[64];
+     char          server_ip[64];
+     char          if_name[IFNAMSIZ];
+@@ -137,18 +138,37 @@ static int tcp_accept(Context *context, int listen_fd)
+     return client_fd;
+ }
+ 
++static crypto_mode_t opposite_mode(crypto_mode_t mode) {
++    return mode == CRYPTO_ENABLED ? CRYPTO_DISABLED : CRYPTO_ENABLED;
++}
++
++static const char* crypto_mode_str(crypto_mode_t mode) {
++    return mode == CRYPTO_ENABLED ? "ENABLED" : "DISABLED";
++}
++
+ static int server_key_exchange(Context *context, const int client_fd)
+ {
+     uint32_t st[12];
+-    uint8_t  pkt1[32 + 8 + 32], pkt2[32 + 32];
++    uint8_t  pkt1[32 + 8 + 32 + 8], pkt2[32 + 32 + 8];
+     uint8_t  h[32];
+     uint8_t  k[32];
+     uint8_t  iv[16] = { 0 };
+     uint64_t ts, now;
++    crypto_mode_t client_crypto_mode = CRYPTO_ENABLED; // Default to enabled
+
+     memcpy(st, context->uc_kx_st, sizeof st);
+     errno = EACCES;
+-    if (safe_read(client_fd, pkt1, sizeof pkt1, ACCEPT_TIMEOUT) != sizeof pkt1) {
++
++    // Read at least the standard packet size
++    size_t bytes_read = safe_read(client_fd, pkt1, sizeof pkt1, ACCEPT_TIMEOUT);
++    if (bytes_read < 32 + 8 + 32) {
++        fprintf(stderr, "Failed to read client handshake packet (incomplete)\n");
++        return -1;
++    }
++
++    // Initialize nocrypto area to zero in case it wasn't fully received
++    if (bytes_read < sizeof(pkt1)) {
++        memset(pkt1 + bytes_read, 0, sizeof(pkt1) - bytes_read);
++    }
++
++    // Check if client is using nocrypto mode (only if we received complete packet)
++    if (bytes_read >= sizeof(pkt1) && memcmp(pkt1 + 32 + 8 + 32, NOCRYPTO_MAGIC, 8) == 0) {
++        client_crypto_mode = CRYPTO_DISABLED;
++    }
++
++    // Check for crypto mode mismatch
++    if (client_crypto_mode != context->crypto_mode) {
+         fprintf(stderr, "Failed to read client handshake packet\n");
+         return -1;
+     }
+-
+-    // Check if client is using nocrypto mode
+-    if (memcmp(pkt1 + 32 + 8 + 32, NOCRYPTO_MAGIC, 8) == 0) {
+-        client_crypto_mode = CRYPTO_DISABLED;
+-    } else {
+-        client_crypto_mode = CRYPTO_ENABLED;
+-    }
+-
+-    // Check for crypto mode mismatch
+-    if (client_crypto_mode != context->crypto_mode) {
++
++    if (client_crypto_mode != context->crypto_mode) {
+         fprintf(stderr, "Crypto mode mismatch: client is %s but server is %s\n",
+                 crypto_mode_str(client_crypto_mode), crypto_mode_str(context->crypto_mode));
+         fprintf(stderr, "The %s should add \"nocrypto\" to match the other side's configuration\n",
+@@ -162,8 +182,15 @@ static int server_key_exchange(Context *context, const int client_fd)
+                 "Clock difference is too large: %" PRIu64 " (client) vs %" PRIu64 " (server)\n", ts,
+                 now);
+         return -1;
++    }
++
++    // Initialize response packet to zeros
++    memset(pkt2, 0, sizeof(pkt2));
++
++    // Generate random bytes for the response
++    uc_randombytes_buf(pkt2, 32);
++
++    // Add our crypto mode to response
++    if (context->crypto_mode == CRYPTO_DISABLED) {
++        memcpy(pkt2 + 32 + 32, NOCRYPTO_MAGIC, 8);
+     }
+     uc_randombytes_buf(pkt2, 32);
+-
+-    // Add our crypto mode to response
+-    if (context->crypto_mode == CRYPTO_DISABLED) {
+-        memcpy(pkt2 + 32 + 32, NOCRYPTO_MAGIC, 8);
+-        uc_hash(st, pkt2 + 32, pkt2, 32);
+-    } else {
+-        uc_hash(st, pkt2 + 32, pkt2, 32);
+-    }
++    uc_hash(st, pkt2 + 32, pkt2, 32);
++
+     if (safe_write_partial(client_fd, pkt2, sizeof pkt2) != sizeof pkt2) {
+         return -1;
+     }
+@@ -228,14 +255,28 @@ static int client_reconnect(Context *context)
+     return -1;
+ }
+
++static void apply_crypto_mode(Context *context) {
++    // If crypto is disabled, replace the encrypt/decrypt functions with no-op versions
++    if (context->crypto_mode == CRYPTO_DISABLED) {
++        printf("Crypto: DISABLED - using no encryption mode\n");
++    } else {
++        printf("Crypto: ENABLED - using standard encryption\n");
++    }
++}
++
+ static int client_key_exchange(Context *context)
+ {
+     uint32_t st[12];
+-    uint8_t  pkt1[32 + 8 + 32], pkt2[32 + 32];
++    uint8_t  pkt1[32 + 8 + 32 + 8], pkt2[32 + 32 + 8];
+     uint8_t  h[32];
+     uint8_t  k[32];
+     uint8_t  iv[16] = { 0 };
+     uint64_t now;
++    crypto_mode_t server_crypto_mode = CRYPTO_ENABLED; // Default to enabled
++
++    // Clear entire buffers to avoid memory leaks
++    memset(pkt1, 0, sizeof(pkt1));
++    memset(pkt2, 0, sizeof(pkt2));
+
+     memcpy(st, context->uc_kx_st, sizeof st);
+     uc_randombytes_buf(pkt1, 32);
+@@ -243,11 +284,27 @@ static int client_key_exchange(Context *context)
+     memcpy(pkt1 + 32, &now, 8);
+     uc_hash(st, pkt1 + 32 + 8, pkt1, 32 + 8);
+     if (safe_write(context->client_fd, pkt1, sizeof pkt1, TIMEOUT) != sizeof pkt1) {
++        fprintf(stderr, "Failed to write handshake packet to server\n");
+         return -1;
+     }
+     errno = EACCES;
+-    if (safe_read(context->client_fd, pkt2, sizeof pkt2, TIMEOUT) != sizeof pkt2) {
++
++    // Read at least the standard packet size
++    size_t bytes_read = safe_read(context->client_fd, pkt2, sizeof pkt2, TIMEOUT);
++    if (bytes_read < 32 + 32) {
++        fprintf(stderr, "Failed to read server response (incomplete)\n");
++        return -1;
++    }
++
++    // Initialize nocrypto area to zero in case it wasn't fully received
++    if (bytes_read < sizeof(pkt2)) {
++        memset(pkt2 + bytes_read, 0, sizeof(pkt2) - bytes_read);
++    }
++
++    // Check if server is using nocrypto mode (only if we received complete packet)
++    if (bytes_read >= sizeof(pkt2) && memcmp(pkt2 + 32 + 32, NOCRYPTO_MAGIC, 8) == 0) {
++        server_crypto_mode = CRYPTO_DISABLED;
++    }
++
++    // Check for crypto mode mismatch
++    if (server_crypto_mode != context->crypto_mode) {
+         fprintf(stderr, "Failed to read server response\n");
+         return -1;
+     }
+-
+-    // Check if server is using nocrypto mode
+-    if (memcmp(pkt2 + 32 + 32, NOCRYPTO_MAGIC, 8) == 0) {
+-        server_crypto_mode = CRYPTO_DISABLED;
+-    } else {
+-        server_crypto_mode = CRYPTO_ENABLED;
+-    }
+-
+-    // Check for crypto mode mismatch
+-    if (server_crypto_mode != context->crypto_mode) {
++
++    if (server_crypto_mode != context->crypto_mode) {
+         fprintf(stderr, "Crypto mode mismatch: client is %s but server is %s\n",
+                 crypto_mode_str(context->crypto_mode), crypto_mode_str(server_crypto_mode));
+         fprintf(stderr, "Use \"nocrypto\" parameter to match the server's configuration\n");
+@@ -334,7 +393,7 @@ static int event_loop(Context *context)
+ #endif
+         if (context->client_fd != -1) {
+             unsigned char tag_full[16];
+-            unsigned char *ptr = tun_buf.len;
++            // Removed unused variable ptr
+             ssize_t       writenb;
+             uint16_t      binlen = endian_swap16((uint16_t) len);
+
+@@ -375,11 +440,16 @@ static int event_loop(Context *context)
+             if (client_buf->pos < (len_with_header = 2 + TAG_LEN + (size_t) len)) {
+                 break;
+             }
++
++            // Validate packet length to prevent buffer overflow
++            if (len <= 0 || len > MAX_PACKET_LEN) {
++                fprintf(stderr, "Invalid packet length: %zd\n", len);
++                return client_reconnect(context);
++            }
+
+             if (context->crypto_mode == CRYPTO_ENABLED) {
+                 if (uc_decrypt(context->uc_st[1], client_buf->data, len, client_buf->tag, TAG_LEN) != 0) {
+                     fprintf(stderr, "Corrupted stream\n");
+-                    sleep(1);
+                     return client_reconnect(context);
+                 }
+             }
+@@ -461,25 +530,33 @@ static int load_key_file(Context *context, const char *file)
+ __attribute__((noreturn)) static void usage(void)
+ {
+     puts("DSVPN " VERSION_STRING
+-         " usage:\n"
++         " usage (with optional no-crypto mode):\n"
+          "\n"
+          "dsvpn\t\"server\"\n\t<key file>\n\t<vpn server ip or name>|\"auto\"\n\t<vpn "
+          "server port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun "
+-         "ip>|\"auto\"\n\t<remote tun ip>\"auto\"\n\t<external ip>|\"auto\""
++         "ip>|\"auto\"\n\t<remote tun ip>\"auto\"\n\t<external ip>|\"auto\"\n\t[\"nocrypto\"]"
+          "\n\n"
+          "dsvpn\t\"client\"\n\t<key file>\n\t<vpn server ip or name>\n\t<vpn server "
+          "port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun "
+-         "ip>|\"auto\"\n\t<remote tun ip>|\"auto\"\n\t<gateway ip>|\"auto\"\n\n"
+-         "Example:\n\n[server]\n\tdd if=/dev/urandom of=vpn.key count=1 bs=32\t# create key\n"
+-         "\tbase64 < vpn.key\t\t# copy key as a string\n\tsudo ./dsvpn server vpn.key\t# listen on "
+-         "443\n\n[client]\n\techo ohKD...W4= | base64 --decode > vpn.key\t# paste key\n"
+-         "\tsudo ./dsvpn client vpn.key 34.216.127.34\n");
++         "ip>|\"auto\"\n\t<remote tun ip>|\"auto\"\n\t<gateway ip>|\"auto\"\n\t[\"nocrypto\"]\n\n"
++         "Example (with encryption):\n\n[server]\n\tdd if=/dev/urandom of=vpn.key count=1 bs=32\t# create key\n"
++         "\tbase64 < vpn.key\t\t# copy key as a string\n\tsudo ./dsvpn server vpn.key\t# listen on 443\n\n"
++         "[client]\n\techo ohKD...W4= | base64 --decode > vpn.key\t# paste key\n"
++         "\tsudo ./dsvpn client vpn.key 34.216.127.34\n\n"
++         "Example (no encryption - for use with XRay):\n\n"
++         "[server]\n\tsudo ./dsvpn server vpn.key auto auto auto auto auto auto nocrypto\n\n"
++         "[client]\n\tsudo ./dsvpn client vpn.key 34.216.127.34 auto auto auto auto auto nocrypto\n");
+     exit(254);
+ }
+
+ static void get_tun6_addresses(Context *context)
+ {
+     static char local_tun_ip6[40], remote_tun_ip6[40];
+-
++
++    // Validate input pointers before using them
++    if (context->local_tun_ip == NULL || context->remote_tun_ip == NULL) {
++        return;
++    }
+     snprintf(local_tun_ip6, sizeof local_tun_ip6, "64:ff9b::%s", context->local_tun_ip);
+     snprintf(remote_tun_ip6, sizeof remote_tun_ip6, "64:ff9b::%s", context->remote_tun_ip);
+     context->local_tun_ip6  = local_tun_ip6;
+@@ -516,6 +593,10 @@ int main(int argc, char *argv[])
+         usage();
+     }
+     memset(&context, 0, sizeof context);
++
++    // Default to crypto enabled mode
++    context.crypto_mode = CRYPTO_ENABLED;
++
+     if (load_key_file(&context, argv[2]) != 0) {
+         fprintf(stderr, "Unable to load the key file [%s]\n", argv[2]);
+         return 1;
+@@ -530,6 +611,17 @@ int main(int argc, char *argv[])
+                                ? (context.is_server ? DEFAULT_CLIENT_IP : DEFAULT_SERVER_IP)
+                                : argv[7];
+     context.wanted_ext_gw_ip = (argc <= 8 || strcmp(argv[8], "auto") == 0) ? NULL : argv[8];
++    
++    // Check for nocrypto flag in any position after the 8th argument
++    for (int i = 8; i < argc; i++) {
++        if (strcmp(argv[i], "nocrypto") == 0) {
++            context.crypto_mode = CRYPTO_DISABLED;
++            printf("No-crypto mode enabled: traffic will not be encrypted by DSVPN\n");
++            break;
++        }
++    }
++    
++    // Apply crypto mode settings
++    apply_crypto_mode(&context);
+     ext_gw_ip = context.wanted_ext_gw_ip ? context.wanted_ext_gw_ip : get_default_gw_ip();
+     snprintf(context.ext_gw_ip, sizeof context.ext_gw_ip, "%s", ext_gw_ip == NULL ? "" : ext_gw_ip);
+     if (ext_gw_ip == NULL && !context.is_server) {

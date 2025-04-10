@@ -40,3 +40,4 @@ key
 modules.order
 zig-out
 .zig-cache
+.idea

@@ -1,0 +1,14 @@
+--- build.zig
++++ build.zig
+@@ -12,9 +12,10 @@ pub fn build(b: *std.Build) !void {
+        .strip = true,
+    });
+    dsvpn.linkLibC();
+-    dsvpn.addIncludePath(.{ .path = "include" });
+-    dsvpn.defineCMacro("_GNU_SOURCE", "1");
++    dsvpn.addIncludePath(b.path("include"));
++    dsvpn.root_module.addCMacro("_GNU_SOURCE", "1");
+    const source_files = &.{ "src/charm.c", "src/os.c", "src/vpn.c" };
+    dsvpn.addCSourceFiles(.{ .files = source_files });
++    b.installArtifact(dsvpn);
+ }

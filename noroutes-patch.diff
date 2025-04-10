@@ -1,0 +1,91 @@
+--- include/vpn.h
++++ include/vpn.h
+@@ -79,6 +79,8 @@
+ 
+ extern volatile sig_atomic_t exit_signal_received;
+ 
++#define NO_DEFAULT_ROUTES_FLAG "noroutes"
++
+ #endif
+ 
+ 
+--- src/vpn.c
++++ src/vpn.c
+@@ -41,6 +41,7 @@ typedef struct Context_ {
+     int           listen_fd;
+     int           congestion;
+     int           firewall_rules_set;
++    int           no_routes;
+     Buf           client_buf;
+     struct pollfd fds[3];
+     uint32_t      uc_kx_st[12];
+@@ -51,7 +52,7 @@ volatile sig_atomic_t exit_signal_received;
+
+ static void signal_handler(int sig)
+ {
+-    signal(sig, SIG_DFL);
++    signal(sig, SIG_DFL); // Reset signal handler
+     exit_signal_received = 1;
+ }
+
+@@ -461,16 +462,16 @@ static int load_key_file(Context *context, const char *file)
+ __attribute__((noreturn)) static void usage(void)
+ {
+     puts("DSVPN " VERSION_STRING
+-         " usage:\n"
++         " usage (with optional no-routes mode):\n"
+          "\n"
+          "dsvpn\t\"server\"\n\t<key file>\n\t<vpn server ip or name>|\"auto\"\n\t<vpn "
+          "server port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun "
+-         "ip>|\"auto\"\n\t<remote tun ip>\"auto\"\n\t<external ip>|\"auto\""
++         "ip>|\"auto\"\n\t<remote tun ip>\"auto\"\n\t<external ip>|\"auto\"\n\t[\"noroutes\"]"
+          "\n\n"
+          "dsvpn\t\"client\"\n\t<key file>\n\t<vpn server ip or name>\n\t<vpn server "
+          "port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun "
+-         "ip>|\"auto\"\n\t<remote tun ip>|\"auto\"\n\t<gateway ip>|\"auto\"\n\n"
+-         "Example:\n\n[server]\n\tdd if=/dev/urandom of=vpn.key count=1 bs=32\t# create key\n"
++         "ip>|\"auto\"\n\t<remote tun ip>|\"auto\"\n\t<gateway ip>|\"auto\"\n\t[\"noroutes\"]\n\n"
++         "Example (with automatic routes):\n\n[server]\n\tdd if=/dev/urandom of=vpn.key count=1 bs=32\t# create key\n"
+          "\tbase64 < vpn.key\t\t# copy key as a string\n\tsudo ./dsvpn server vpn.key\t# listen on "
+          "443\n\n[client]\n\techo ohKD...W4= | base64 --decode > vpn.key\t# paste key\n"
+          "\tsudo ./dsvpn client vpn.key 34.216.127.34\n");
+@@ -515,9 +516,17 @@ int main(int argc, char *argv[])
+     if (argc < 3) {
+         usage();
+     }
++
++    // Initialize context
+     memset(&context, 0, sizeof context);
++
++    // Default to routes enabled
++    context.no_routes = 0;
++
++    // Set server or client mode
+     context.is_server = strcmp(argv[1], "server") == 0;
+-    if (load_key_file(&context, argv[2]) != 0) {
++
++    if (argv[2] == NULL || load_key_file(&context, argv[2]) != 0) {
+         fprintf(stderr, "Unable to load the key file [%s]\n", argv[2]);
+         return 1;
+     }
+@@ -530,6 +539,20 @@ int main(int argc, char *argv[])
+                                ? (context.is_server ? DEFAULT_CLIENT_IP : DEFAULT_SERVER_IP)
+                                : argv[7];
+     context.wanted_ext_gw_ip = (argc <= 8 || strcmp(argv[8], "auto") == 0) ? NULL : argv[8];
++
++    // Check for noroutes flag in any position after the 8th argument
++    if (argc > 8) {
++        for (int i = 8; i < argc; i++) {
++            if (argv[i] != NULL && strcmp(argv[i], NO_DEFAULT_ROUTES_FLAG) == 0) {
++                context.no_routes = 1;
++                printf("No-routes mode enabled: default routes will not be added\n");
++#ifndef NO_DEFAULT_ROUTES
++                // Dynamically define NO_DEFAULT_ROUTES for this run
++#define NO_DEFAULT_ROUTES 1
++#endif
++            }
++        }
++    }
+     ext_gw_ip = context.wanted_ext_gw_ip ? context.wanted_ext_gw_ip : get_default_gw_ip();
+     snprintf(context.ext_gw_ip, sizeof context.ext_gw_ip, "%s", ext_gw_ip == NULL ? "" : ext_gw_ip);
+     if (ext_gw_ip == NULL && !context.is_server) {

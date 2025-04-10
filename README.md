@@ -18,6 +18,8 @@ Features:
 * Works out of the box. No lousy documentation to read. No configuration file. No post-configuration. Run a single-line command on the server, a similar one on the client and you're done. No firewall and routing rules to manually mess with.
 * Works on Linux (kernel >= 3.17), macOS and OpenBSD, as well as DragonFly BSD, FreeBSD and NetBSD in client and point-to-point modes. Adding support for other operating systems is trivial.
 * Doesn't leak between reconnects if the network doesn't change. Blocks IPv6 on the client to prevent IPv6 leaks.
+* Optional "nocrypto" mode for integrations with other secure transport layers like XRay VLESS Reality.
+* Optional "noroutes" mode for manual control of routing tables.
 
 ## Installation
 
@@ -80,6 +82,60 @@ Evaggelos Balaskas wrote a great blog post walking through the whole procedure: 
 
 He also maintains [systemd service files for DSVPN](https://github.com/ebal/scripts/tree/master/dsvpn). Thank you Evaggelos!
 
+## Enhanced Options
+
+### NoCrypto Mode
+
+For use with other secure transport layers such as XRay VLESS Reality, DSVPN can be run without its internal encryption:
+
+```sh
+# Server with no encryption
+sudo ./dsvpn server vpn.key auto 1959 auto auto auto auto nocrypto
+
+# Client with no encryption
+sudo ./dsvpn client vpn.key 34.216.127.34 1959 auto auto auto auto nocrypto
+```
+
+This eliminates double encryption overhead, reducing CPU usage and improving performance when DSVPN is used alongside another encrypted tunnel.
+
+### NoRoutes Mode
+
+To manually control routing without DSVPN automatically setting up routes:
+
+```sh
+# Server with no automatic routes
+sudo ./dsvpn server vpn.key auto 1959 auto auto auto auto noroutes
+
+# Client with no automatic routes
+sudo ./dsvpn client vpn.key 34.216.127.34 1959 auto auto auto auto noroutes
+```
+
+This allows for custom routing configurations and is particularly useful for integration with other networking tools.
+
+### Combined Mode
+
+Both options can be used together:
+
+```sh
+# Server with no encryption and no automatic routes
+sudo ./dsvpn server vpn.key auto 1959 auto auto auto auto nocrypto noroutes
+
+# Client with no encryption and no automatic routes
+sudo ./dsvpn client vpn.key 34.216.127.34 1959 auto auto auto auto nocrypto noroutes
+```
+
+When using `noroutes`, you'll need to manually configure the interface:
+
+```bash
+# On server
+ip link set dev tun0 up
+ip addr add 192.168.192.254 peer 192.168.192.1 dev tun0
+
+# On client
+ip link set dev tun0 up
+ip route add 192.168.1.0/24 dev tun0
+```
+
 ## A note on DNS
 
 If you were previously using a DNS resolver only accessible from the local network, it won't be accessible through the VPN. That might be the only thing you may have to change. Use a public resolver, a local resolver, or DNSCrypt.
@@ -97,6 +153,7 @@ dsvpn   "server"
         <local tun ip>|"auto"
         <remote tun ip>"auto"
         <external ip>|"auto"
+        ["nocrypto"] ["noroutes"]
 
 dsvpn   "client"
         <key file>
@@ -106,6 +163,7 @@ dsvpn   "client"
         <local tun ip>|"auto"
         <remote tun ip>|"auto"
         <gateway ip>|"auto"
+        ["nocrypto"] ["noroutes"]
 ```
 
 * `server`|`client`: use `server` on the server, and `client` on clients.
@@ -117,8 +175,27 @@ dsvpn   "client"
 * `<remote tun ip>`: remote IP address of the tunnel. See above. The local and remote tunnel IPs must the same on the client and on the server, just reversed. For some reason, I tend to pick `192.168.192.254` for the server, and `192.168.192.1` for the client. These values will be used if you put `auto` for the local and remote tunnel IPs.
 * `<external ip>` (server only): the external IP address of the server. Can be left to `"auto"`.
 * `<gateway ip>` (client only): the internal router IP address. The first line printed by `netstat -rn` will tell you (`gateway`).
+* `nocrypto` (optional): disables encryption, useful when DSVPN is used with another secure transport.
+* `noroutes` (optional): prevents automatic route configuration, allowing manual control.
 
 If all the remaining parameters of a command would be `auto`, they don't have to be specified.
+
+## Performance Tuning
+
+For better performance with XRay and other integrations, DSVPN supports various compile-time optimizations:
+
+```bash
+# High throughput optimization
+make CFLAGS="-DBUFFERBLOAT_CONTROL=0 -DDEFAULT_MTU=9000"
+
+# Low latency optimization
+make CFLAGS="-DBUFFERBLOAT_CONTROL=1 -DNOTSENT_LOWAT=16384 -DTIMEOUT=30000"
+
+# Reliable connection (for unstable networks)
+make CFLAGS="-DRECONNECT_ATTEMPTS=500 -DTIMEOUT=10000 -DACCEPT_TIMEOUT=5000"
+```
+
+See the PATCHES.md file for more detailed information on performance tuning options.
 
 ## Related projects
 
