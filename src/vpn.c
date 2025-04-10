@@ -15,15 +15,15 @@ typedef struct __attribute__((aligned(16))) Buf_ {
 } Buf;
 
 typedef struct Context_ {
-    const char *  wanted_if_name;
-    const char *  local_tun_ip;
-    const char *  remote_tun_ip;
-    const char *  local_tun_ip6;
-    const char *  remote_tun_ip6;
-    const char *  server_ip_or_name;
-    const char *  server_port;
-    const char *  ext_if_name;
-    const char *  wanted_ext_gw_ip;
+    const char   *wanted_if_name;
+    const char   *local_tun_ip;
+    const char   *remote_tun_ip;
+    const char   *local_tun_ip6;
+    const char   *remote_tun_ip6;
+    const char   *server_ip_or_name;
+    const char   *server_port;
+    const char   *ext_if_name;
+    const char   *wanted_ext_gw_ip;
     char          client_ip[NI_MAXHOST];
     char          ext_gw_ip[64];
     char          server_ip[64];
@@ -50,16 +50,16 @@ static void signal_handler(int sig)
 
 static int firewall_rules(Context *context, int set, int silent)
 {
-    const char *       substs[][2] = { { "$LOCAL_TUN_IP6", context->local_tun_ip6 },
-                                { "$REMOTE_TUN_IP6", context->remote_tun_ip6 },
-                                { "$LOCAL_TUN_IP", context->local_tun_ip },
-                                { "$REMOTE_TUN_IP", context->remote_tun_ip },
-                                { "$EXT_IP", context->server_ip },
-                                { "$EXT_PORT", context->server_port },
-                                { "$EXT_IF_NAME", context->ext_if_name },
-                                { "$EXT_GW_IP", context->ext_gw_ip },
-                                { "$IF_NAME", context->if_name },
-                                { NULL, NULL } };
+    const char        *substs[][2] = { { "$LOCAL_TUN_IP6", context->local_tun_ip6 },
+                                       { "$REMOTE_TUN_IP6", context->remote_tun_ip6 },
+                                       { "$LOCAL_TUN_IP", context->local_tun_ip },
+                                       { "$REMOTE_TUN_IP", context->remote_tun_ip },
+                                       { "$EXT_IP", context->server_ip },
+                                       { "$EXT_PORT", context->server_port },
+                                       { "$EXT_IF_NAME", context->ext_if_name },
+                                       { "$EXT_GW_IP", context->ext_gw_ip },
+                                       { "$IF_NAME", context->if_name },
+                                       { NULL, NULL } };
     const char *const *cmds;
     size_t             i;
 
@@ -139,7 +139,7 @@ static int tcp_listener(const char *address, const char *port)
         return -1;
     }
     if ((listen_fd = socket(res->ai_family, SOCK_STREAM, IPPROTO_TCP)) == -1 ||
-        setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, (char *) (int[]){ 1 }, sizeof(int)) != 0) {
+        setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, (char *) (int[]) { 1 }, sizeof(int)) != 0) {
         err = errno;
         (void) close(listen_fd);
         freeaddrinfo(res);
@@ -147,11 +147,11 @@ static int tcp_listener(const char *address, const char *port)
         return -1;
     }
 #if defined(IPPROTO_IPV6) && defined(IPV6_V6ONLY)
-    (void) setsockopt(listen_fd, IPPROTO_IPV6, IPV6_V6ONLY, (char *) (int[]){ 0 }, sizeof(int));
+    (void) setsockopt(listen_fd, IPPROTO_IPV6, IPV6_V6ONLY, (char *) (int[]) { 0 }, sizeof(int));
 #endif
 #ifdef TCP_DEFER_ACCEPT
     (void) setsockopt(listen_fd, SOL_TCP, TCP_DEFER_ACCEPT,
-                      (char *) (int[]){ ACCEPT_TIMEOUT / 1000 }, sizeof(int));
+                      (char *) (int[]) { ACCEPT_TIMEOUT / 1000 }, sizeof(int));
 #endif
     printf("Listening to %s:%s\n", address == NULL ? "*" : address, port);
     if (bind(listen_fd, (struct sockaddr *) res->ai_addr, (socklen_t) res->ai_addrlen) != 0 ||
@@ -171,7 +171,7 @@ static void client_disconnect(Context *context)
     }
     (void) close(context->client_fd);
     context->client_fd          = -1;
-    context->fds[POLLFD_CLIENT] = (struct pollfd){ .fd = -1, .events = 0 };
+    context->fds[POLLFD_CLIENT] = (struct pollfd) { .fd = -1, .events = 0 };
     memset(context->uc_st, 0, sizeof context->uc_st);
 }
 
@@ -326,7 +326,7 @@ static int client_connect(Context *context)
     }
     firewall_rules(context, 1, 0);
     context->fds[POLLFD_CLIENT] =
-        (struct pollfd){ .fd = context->client_fd, .events = POLLIN, .revents = 0 };
+        (struct pollfd) { .fd = context->client_fd, .events = POLLIN, .revents = 0 };
     puts("Connected");
 
     return 0;
@@ -354,7 +354,7 @@ static int event_loop(Context *context)
 {
     struct pollfd *const fds = context->fds;
     Buf                  tun_buf;
-    Buf *                client_buf = &context->client_buf;
+    Buf                 *client_buf = &context->client_buf;
     ssize_t              len;
     int                  found_fds;
     int                  new_client_fd;
@@ -379,7 +379,7 @@ static int event_loop(Context *context)
         client_buf->pos    = 0;
         memset(client_buf->data, 0, sizeof client_buf->data);
         puts("Session established");
-        fds[POLLFD_CLIENT] = (struct pollfd){ .fd = context->client_fd, .events = POLLIN };
+        fds[POLLFD_CLIENT] = (struct pollfd) { .fd = context->client_fd, .events = POLLIN };
     }
     if ((fds[POLLFD_TUN].revents & POLLERR) || (fds[POLLFD_TUN].revents & POLLHUP)) {
         puts("HUP (tun)");
@@ -410,7 +410,7 @@ static int event_loop(Context *context)
                 context->congestion = 1;
                 writenb             = (ssize_t) 0;
             }
-            if (writenb != (ssize_t)(2U + TAG_LEN + len)) {
+            if (writenb != (ssize_t) (2U + TAG_LEN + len)) {
                 writenb = safe_write(context->client_fd, tun_buf.len + writenb,
                                      2U + TAG_LEN + len - writenb, TIMEOUT);
             }
@@ -441,8 +441,8 @@ static int event_loop(Context *context)
             if (client_buf->pos < (len_with_header = 2 + TAG_LEN + (size_t) len)) {
                 break;
             }
-            if (uc_decrypt(context->uc_st[1], client_buf->data, len, client_buf->tag, TAG_LEN) !=
-                0) {
+            if (len > sizeof client_buf->data || uc_decrypt(context->uc_st[1], client_buf->data,
+                                                            len, client_buf->tag, TAG_LEN) != 0) {
                 fprintf(stderr, "Corrupted stream\n");
                 sleep(1);
                 return client_reconnect(context);
@@ -466,14 +466,14 @@ static int doit(Context *context)
     context->client_fd = context->listen_fd = -1;
     memset(context->fds, 0, sizeof *context->fds);
     context->fds[POLLFD_TUN] =
-        (struct pollfd){ .fd = context->tun_fd, .events = POLLIN, .revents = 0 };
+        (struct pollfd) { .fd = context->tun_fd, .events = POLLIN, .revents = 0 };
     if (context->is_server) {
         if ((context->listen_fd = tcp_listener(context->server_ip_or_name, context->server_port)) ==
             -1) {
             perror("Unable to set up a TCP server");
             return -1;
         }
-        context->fds[POLLFD_LISTENER] = (struct pollfd){
+        context->fds[POLLFD_LISTENER] = (struct pollfd) {
             .fd     = context->listen_fd,
             .events = POLLIN,
         };
@@ -572,14 +572,14 @@ int main(int argc, char *argv[])
     if (context.server_ip_or_name == NULL && !context.is_server) {
         usage();
     }
-    context.server_port    = (argc <= 4 || strcmp(argv[4], "auto") == 0) ? DEFAULT_PORT : argv[4];
-    context.wanted_if_name = (argc <= 5 || strcmp(argv[5], "auto") == 0) ? NULL : argv[5];
-    context.local_tun_ip   = (argc <= 6 || strcmp(argv[6], "auto") == 0)
-                               ? (context.is_server ? DEFAULT_SERVER_IP : DEFAULT_CLIENT_IP)
-                               : argv[6];
-    context.remote_tun_ip = (argc <= 7 || strcmp(argv[7], "auto") == 0)
-                                ? (context.is_server ? DEFAULT_CLIENT_IP : DEFAULT_SERVER_IP)
-                                : argv[7];
+    context.server_port      = (argc <= 4 || strcmp(argv[4], "auto") == 0) ? DEFAULT_PORT : argv[4];
+    context.wanted_if_name   = (argc <= 5 || strcmp(argv[5], "auto") == 0) ? NULL : argv[5];
+    context.local_tun_ip     = (argc <= 6 || strcmp(argv[6], "auto") == 0)
+                                   ? (context.is_server ? DEFAULT_SERVER_IP : DEFAULT_CLIENT_IP)
+                                   : argv[6];
+    context.remote_tun_ip    = (argc <= 7 || strcmp(argv[7], "auto") == 0)
+                                   ? (context.is_server ? DEFAULT_CLIENT_IP : DEFAULT_SERVER_IP)
+                                   : argv[7];
     context.wanted_ext_gw_ip = (argc <= 8 || strcmp(argv[8], "auto") == 0) ? NULL : argv[8];
     ext_gw_ip = context.wanted_ext_gw_ip ? context.wanted_ext_gw_ip : get_default_gw_ip();
     snprintf(context.ext_gw_ip, sizeof context.ext_gw_ip, "%s", ext_gw_ip == NULL ? "" : ext_gw_ip);
