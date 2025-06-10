@@ -123,7 +123,7 @@ If all the remaining parameters of a command would be `auto`, they don't have to
 ## Related projects
 
 * Robert Debock maintains [an Ansible role for DSVPN](https://github.com/robertdebock/ansible-role-dsvpn)
-* [OpenMPTCProuter](http://www.openmptcprouter.com/) is an OpenWRT-based router OS that supports DSVPN
+* [OpenMPTCProuter](http://www.openmptcprouter.com/) is an OpenWrt-based router OS that supports DSVPN
 * Yecheng Fu maintains a [Docker image for DSVPN](https://github.com/cofyc/dsvpn-docker)
 
 ## Why
