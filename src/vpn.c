@@ -536,7 +536,7 @@ static void get_tun6_addresses(Context *context)
 
 static int resolve_ip(char *ip, size_t sizeof_ip, const char *ip_or_name)
 {
-    struct addrinfo hints, *res;
+    struct addrinfo hints, *res = NULL;
     int             eai;
 
     memset(&hints, 0, sizeof hints);
@@ -549,8 +549,12 @@ static int resolve_ip(char *ip, size_t sizeof_ip, const char *ip_or_name)
         (eai = getnameinfo(res->ai_addr, res->ai_addrlen, ip, (socklen_t) sizeof_ip, NULL, 0,
                            NI_NUMERICHOST | NI_NUMERICSERV)) != 0) {
         fprintf(stderr, "Unable to resolve [%s]: [%s]\n", ip_or_name, gai_strerror(eai));
+        if (res != NULL) {
+            freeaddrinfo(res);
+        }
         return -1;
     }
+    freeaddrinfo(res);
     return 0;
 }
 
