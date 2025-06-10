@@ -95,7 +95,7 @@ dsvpn   "server"
         <vpn server port>|"auto"
         <tun interface>|"auto"
         <local tun ip>|"auto"
-        <remote tun ip>"auto"
+        <remote tun ip>|"auto"
         <external ip>|"auto"
 
 dsvpn   "client"
