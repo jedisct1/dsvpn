@@ -14,6 +14,11 @@ typedef struct __attribute__((aligned(16))) Buf_ {
     size_t        pos;
 } Buf;
 
+typedef struct BufHead_ {
+    unsigned char len[2];
+    unsigned char tag[TAG_LEN];
+} BufHead;
+
 typedef struct Context_ {
     const char   *wanted_if_name;
     const char   *local_tun_ip;
@@ -428,6 +433,7 @@ static int event_loop(Context *context)
         uint16_t binlen;
         size_t   len_with_header;
         ssize_t  readnb;
+        void    *client_buf_head;
 
         if ((readnb = safe_read_partial(context->client_fd, client_buf->len + client_buf->pos,
                                         2 + TAG_LEN + MAX_PACKET_LEN - client_buf->pos)) <= 0) {
@@ -435,27 +441,30 @@ static int event_loop(Context *context)
             return client_reconnect(context);
         }
         client_buf->pos += readnb;
+        client_buf_head = client_buf->len;
         while (client_buf->pos >= 2 + TAG_LEN) {
-            memcpy(&binlen, client_buf->len, 2);
+            BufHead       *bf   = (BufHead *) client_buf_head;
+            unsigned char *tag  = bf->tag;
+            unsigned char *data = client_buf_head + 2 + TAG_LEN;
+            memcpy(&binlen, bf->len, 2);
             len = (ssize_t) endian_swap16(binlen);
             if (client_buf->pos < (len_with_header = 2 + TAG_LEN + (size_t) len)) {
                 break;
             }
-            if (len > sizeof client_buf->data || uc_decrypt(context->uc_st[1], client_buf->data,
-                                                            len, client_buf->tag, TAG_LEN) != 0) {
+            if (len > sizeof client_buf->data ||
+                uc_decrypt(context->uc_st[1], data, len, tag, TAG_LEN) != 0) {
                 fprintf(stderr, "Corrupted stream\n");
                 sleep(1);
                 return client_reconnect(context);
             }
-            if (tun_write(context->tun_fd, client_buf->data, len) != len) {
+            if (tun_write(context->tun_fd, data, len) != len) {
                 perror("tun_write");
             }
-            if (2 + TAG_LEN + MAX_PACKET_LEN != len_with_header) {
-                unsigned char *rbuf      = client_buf->len;
-                size_t         remaining = client_buf->pos - len_with_header;
-                memmove(rbuf, rbuf + len_with_header, remaining);
-            }
+            client_buf_head += len_with_header;
             client_buf->pos -= len_with_header;
+        }
+        if (client_buf_head != client_buf->len && client_buf->pos > 0) {
+            memmove(client_buf->len, client_buf_head, client_buf->pos);
         }
     }
     return 0;
