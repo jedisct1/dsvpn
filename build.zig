@@ -1,22 +1,26 @@
 const std = @import("std");
-const builtin = @import("builtin");
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{ .preferred_optimize_mode = .ReleaseSmall });
 
-    const dsvpn = b.addExecutable(.{
-        .name = "dsvpn",
+    const root_module = b.createModule(.{
         .target = target,
         .optimize = optimize,
+        .link_libc = true,
         .strip = true,
     });
-    dsvpn.linkLibC();
-    dsvpn.addIncludePath(b.path("include"));
-    dsvpn.root_module.addCMacro("_GNU_SOURCE", "1");
+    root_module.addIncludePath(b.path("include"));
+    root_module.addCMacro("_GNU_SOURCE", "1");
     const source_files = &.{ "src/charm.c", "src/os.c", "src/vpn.c" };
-    dsvpn.addCSourceFiles(.{ .files = source_files });
+    root_module.addCSourceFiles(.{ .files = source_files });
+
+    const dsvpn = b.addExecutable(.{
+        .name = "dsvpn",
+        .root_module = root_module,
+    });
     b.installArtifact(dsvpn);
+
     const run_cmd = b.addRunArtifact(dsvpn);
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {
