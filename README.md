@@ -152,4 +152,4 @@ The cryptographic primitives used in DSVPN are available as a standalone project
 
 None.
 
-This is not intended to be a replacement for GloryTun or WireGuard. This is what I use, because it solves a problem I had. Extending it to solve different problems is not planned, but feel free to fork it and tailor it to your needs!
+This is what I use, because it solves a problem I had. Extending it to solve different problems is not planned, but feel free to fork it and tailor it to your needs!
