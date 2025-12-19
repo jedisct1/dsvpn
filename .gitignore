@@ -30,6 +30,8 @@
 *.su
 *.x86_64
 *~
+.cflags
+.test.c
 .tmp_versions/
 .vscode
 Mkfile.old
