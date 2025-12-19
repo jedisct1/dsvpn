@@ -19,14 +19,14 @@ clean:
 	rm -f dsvpn *~ $(CFLAGS_FILE) $(COMPILE_TEST_FILE)
 
 $(CFLAGS_FILE):
-	@CFLAGS="$(CFLAGS)"
-	@if [ -z "$$CFLAGS" ]; then \
+	@CFLAGS="$(CFLAGS)"; \
+	if [ -z "$$CFLAGS" ]; then \
 		if [ ! -r "$(CFLAGS_FILE)" ]; then \
 			echo "int main(void) { return 0; }" > "$(COMPILE_TEST_FILE)"; \
 			for flag in -march=native -mtune=native -O3 -Wno-unused-command-line-argument; do \
 				$(CC) $${CFLAGS} $${flag} "$(COMPILE_TEST_FILE)" >/dev/null 2>&1 && CFLAGS="$$CFLAGS $$flag"; \
 			done; \
-			rm -f a.out \
+			rm -f a.out; \
 			CFLAGS="$${CFLAGS} -Wall -W -Wshadow -Wmissing-prototypes"; \
 		fi \
 	fi; \

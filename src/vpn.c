@@ -441,13 +441,14 @@ static int event_loop(Context *context)
             if (client_buf->pos < (len_with_header = 2 + TAG_LEN + (size_t) len)) {
                 break;
             }
-            if (len > sizeof client_buf->data || uc_decrypt(context->uc_st[1], client_buf->data,
-                                                            len, client_buf->tag, TAG_LEN) != 0) {
+            if ((size_t) len > sizeof client_buf->data ||
+                uc_decrypt(context->uc_st[1], client_buf->data, (size_t) len, client_buf->tag,
+                           TAG_LEN) != 0) {
                 fprintf(stderr, "Corrupted stream\n");
                 sleep(1);
                 return client_reconnect(context);
             }
-            if (tun_write(context->tun_fd, client_buf->data, len) != len) {
+            if (tun_write(context->tun_fd, client_buf->data, (size_t) len) != len) {
                 perror("tun_write");
             }
             if (2 + TAG_LEN + MAX_PACKET_LEN != len_with_header) {
@@ -512,7 +513,7 @@ __attribute__((noreturn)) static void usage(void)
          "\n"
          "dsvpn\t\"server\"\n\t<key file>\n\t<vpn server ip or name>|\"auto\"\n\t<vpn "
          "server port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun "
-         "ip>|\"auto\"\n\t<remote tun ip>\"auto\"\n\t<external ip>|\"auto\""
+         "ip>|\"auto\"\n\t<remote tun ip>|\"auto\"\n\t<external ip>|\"auto\""
          "\n\n"
          "dsvpn\t\"client\"\n\t<key file>\n\t<vpn server ip or name>\n\t<vpn server "
          "port>|\"auto\"\n\t<tun interface>|\"auto\"\n\t<local tun "
