@@ -200,7 +200,7 @@ static inline int equals(const unsigned char a[16], const unsigned char b[16], s
     for (i = 0; i < len; i++) {
         d |= a[i] ^ b[i];
     }
-    return (1 ^ optblocker) & ((d - 1 ^ optblocker) >> 8);
+    return (1 ^ optblocker) & (((d - 1) ^ optblocker) >> 8);
 }
 
 static inline void squeeze_permute(uint32_t st[12], unsigned char dst[16])
