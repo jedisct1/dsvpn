@@ -80,6 +80,10 @@ static void permute(uint32_t st[12])
 
 static void permute(uint32_t st[12])
 {
+#ifdef __aarch64__
+    const uint8x16_t rhoEast2 = { 11, 8, 9, 10, 15, 12, 13, 14,
+                                  3,  0, 1, 2,  7,  4,  5,  6 };
+#endif
     uint32x4_t a, b, c, d, e, f;
     int        r;
 
@@ -104,9 +108,14 @@ static void permute(uint32_t st[12])
         a = veorq_u32(a, e);
         d = veorq_u32(b, d);
         c = veorq_u32(c, f);
-        f = vextq_u32(c, c, 2);
         b = ROL32in128(d, 1);
+#ifdef __aarch64__
+        c = vreinterpretq_u32_u8(vqtbl1q_u8(vreinterpretq_u8_u32(c),
+                                            rhoEast2));
+#else
+        f = vextq_u32(c, c, 2);
         c = ROL32in128(f, 8);
+#endif
     }
     vst1q_u32((uint32_t *) (void *) &st[0], a);
     vst1q_u32((uint32_t *) (void *) &st[4], b);
@@ -178,6 +187,9 @@ static inline void xor128(void *out, const void *in)
     _mm_storeu_si128((__m128i *) out,
                      _mm_xor_si128(_mm_loadu_si128((const __m128i *) out),
                                    _mm_loadu_si128((const __m128i *) in)));
+#elif defined(__ARM_NEON) || defined(__aarch64__)
+    vst1q_u8((uint8_t *) out, veorq_u8(vld1q_u8((const uint8_t *) out),
+                                       vld1q_u8((const uint8_t *) in)));
 #else
     unsigned char       *out_ = (unsigned char *) out;
     const unsigned char *in_  = (const unsigned char *) in;
@@ -213,7 +225,11 @@ static inline void squeeze_permute(uint32_t st[12], unsigned char dst[16])
 
 void uc_state_init(uint32_t st[12], const unsigned char key[32], const unsigned char iv[16])
 {
-    memcpy(&st[0], iv, 16);
+    if (iv != NULL) {
+        memcpy(&st[0], iv, 16);
+    } else {
+        memset(&st[0], 0, 16);
+    }
     memcpy(&st[4], key, 32);
     endian_swap_all(st);
     permute(st);
