@@ -629,7 +629,7 @@ int main(int argc, char *argv[])
         perror("mtu");
     }
 #ifdef __OpenBSD__
-    pledge("stdio proc exec dns inet", NULL);
+    pledge("stdio proc exec dns inet dns pf error", NULL);
 #endif
     context.firewall_rules_set = -1;
     if (context.server_ip_or_name != NULL &&
