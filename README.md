@@ -135,8 +135,6 @@ WireGuard doesn't work over TCP.
 
 [GloryTun](https://github.com/angt/glorytun) is excellent, but requires post-configuration and the maintained branch uses UDP.
 
-I forgot about [VTUN-libsodium](https://github.com/jedisct1/vtun). But it would have been too much complexity and attack surface for a simple use case.
-
 OpenVPN is horribly difficult to set up.
 
 Sshuttle is very nice and I've been using it a lot in the past, but it's not a VPN. It doesn't tunnel non-TCP traffic. It also requires a full Python install, which I'd rather avoid on my router.
