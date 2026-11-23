@@ -143,7 +143,7 @@ Sshuttle is very nice and I've been using it a lot in the past, but it's not a V
 
 Everything else I looked at was either too difficult to use, slow, bloated, didn't work on macOS, didn't work on small devices, was complicated to cross-compile due to dependencies, wasn't maintained, or didn't feel secure.
 
-TCP-over-TCP is not as bad as some documents describe. It works surprisingly well in practice, especially with modern congestion control algorithms (BBR). For traditional algorithms that rely on packet loss, DSVPN couples the inner and outer congestion controllers by lowering `TCP_NOTSENT_LOWAT` and dropping packets when congestion is detected at the outer layer.
+TCP-over-TCP is not as bad as some documents describe. It works surprisingly well in practice, especially with modern congestion control algorithms (BBR). For traditional algorithms that rely on packet loss, DSVPN couples the inner and outer congestion controllers by lowering `TCP_NOTSENT_LOWAT` and by no longer reading from the tunnel interface while the outer connection is congested. Packets then queue up and get dropped at the interface instead of piling up in the outer socket.
 
 ## Cryptography
 
