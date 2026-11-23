@@ -487,9 +487,10 @@ static int event_loop(Context *context)
 static int doit(Context *context)
 {
     context->client_fd = context->listen_fd = -1;
-    memset(context->fds, 0, sizeof *context->fds);
     context->fds[POLLFD_TUN] =
         (struct pollfd) { .fd = context->tun_fd, .events = POLLIN, .revents = 0 };
+    context->fds[POLLFD_LISTENER] = (struct pollfd) { .fd = -1, .events = 0 };
+    context->fds[POLLFD_CLIENT]   = (struct pollfd) { .fd = -1, .events = 0 };
     if (context->is_server) {
         if ((context->listen_fd = tcp_listener(context->server_ip_or_name, context->server_port)) ==
             -1) {
@@ -650,7 +651,9 @@ int main(int argc, char *argv[])
     }
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
+    signal(SIGPIPE, SIG_IGN);
     if (doit(&context) != 0) {
+        firewall_rules(&context, 0, 0);
         return -1;
     }
     firewall_rules(&context, 0, 0);
